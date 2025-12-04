@@ -3,56 +3,39 @@ import 'package:gmail_clone/data/models/user_account.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LocalStorage {
-  static const accountsKey = "saved_accounts";
-  static const activeUserKey = "active_user";
+  static const key = "saved_accounts";
+  static const activeKey = "active_user";
 
   Future<void> saveAccount(AppUser user) async {
     final prefs = await SharedPreferences.getInstance();
-    final List<String> saved = prefs.getStringList(accountsKey) ?? [];
+    final list = prefs.getStringList(key) ?? [];
 
-    final exists = saved.any(
-      (e) => AppUser.fromMap(jsonDecode(e)).uid == user.uid,
-    );
-    if (!exists) {
-      saved.add(jsonEncode(user.toMap()));
-      await prefs.setStringList(accountsKey, saved);
+    if (!list.any((e) => AppUser.fromMap(jsonDecode(e)).uid == user.uid)) {
+      list.add(jsonEncode(user.toMap()));
+      prefs.setStringList(key, list);
     }
   }
 
   Future<List<AppUser>> loadAccounts() async {
     final prefs = await SharedPreferences.getInstance();
-    final list = prefs.getStringList(accountsKey) ?? [];
+    final list = prefs.getStringList(key) ?? [];
     return list.map((e) => AppUser.fromMap(jsonDecode(e))).toList();
-  }
-
-  Future<void> removeAccount(String uid) async {
-    final prefs = await SharedPreferences.getInstance();
-    final list = prefs.getStringList(accountsKey) ?? [];
-
-    final filtered =
-        list.where((e) {
-          final user = AppUser.fromMap(jsonDecode(e));
-          return user.uid != uid;
-        }).toList();
-
-    await prefs.setStringList(accountsKey, filtered);
   }
 
   Future<void> saveActiveUser(AppUser user) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(activeUserKey, jsonEncode(user.toMap()));
+    prefs.setString(activeKey, jsonEncode(user.toMap()));
   }
 
   Future<AppUser?> loadActiveUser() async {
     final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getString(activeUserKey);
-    if (data == null) return null;
-
-    return AppUser.fromMap(jsonDecode(data));
+    final raw = prefs.getString(activeKey);
+    if (raw == null) return null;
+    return AppUser.fromMap(jsonDecode(raw));
   }
 
   Future<void> clearActiveUser() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(activeUserKey);
+    prefs.remove(activeKey);
   }
 }
