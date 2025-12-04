@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "519576392172",
+    "project_id": "clone-965d6",
+    "storage_bucket": "clone-965d6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:519576392172:android:fd6865f312028ec321b0c9",
+        "android_client_info": {
+          "package_name": "com.example.gmail_clone"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "519576392172-9cug0ir20td60cjo1kb45ndd555vb71h.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAQh0yNBWvBXwwMBbrYxGQEv4cr2Ahgb9s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "519576392172-9cug0ir20td60cjo1kb45ndd555vb71h.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
