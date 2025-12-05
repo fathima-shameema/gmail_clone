@@ -1,0 +1,85 @@
+import 'dart:developer';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:gmail_clone/data/models/mail.dart';
+
+class MailRepository {
+  final _fire = FirebaseFirestore.instance;
+
+  Future<void> sendMail(MailModel mail) async {
+    log("📨 [SEND] Sending mail: ${mail.toMap()}");
+    try {
+      // Ensure all required fields are present, especially "from"
+      final mailData = mail.toMap();
+      
+      // Verify "from" field exists and is not empty
+      if (mailData["from"] == null || mailData["from"].toString().isEmpty) {
+        throw Exception("Mail 'from' field is missing or empty");
+      }
+      
+      log("📨 [SEND] From: ${mailData["from"]}, To: ${mailData["to"]}, Subject: ${mailData["subject"]}");
+      
+      // Save to Firestore with explicit merge to ensure all fields are saved
+      await _fire.collection("mails").doc(mail.id).set(mailData, SetOptions(merge: false));
+      
+      log("✅ [SEND] Mail stored successfully with ID: ${mail.id}");
+      print("✅ [SEND] Mail stored successfully.");
+    } catch (e) {
+      log("❌ [SEND][ERROR] Failed to send mail: $e");
+      print("❌ [SEND][ERROR] Failed to send mail: $e");
+      rethrow;
+    }
+  }
+
+  Stream<List<MailModel>> getInbox(String userEmail) {
+    log("📥 [INBOX] Listening for inbox mails of: $userEmail");
+    return _fire
+        .collection("mails")
+        .where("to", isEqualTo: userEmail)
+        .where("isDeleted", isEqualTo: false)
+        .snapshots()
+        .map((s) {
+          log("📥 [INBOX] Received ${s.docs.length} mails");
+          return s.docs.map((d) => MailModel.fromMap(d.data())).toList();
+        });
+  }
+
+  Stream<List<MailModel>> getSent(String userEmail) {
+    log("📤 [SENT] Listening for sent mails of: $userEmail");
+    return _fire
+        .collection("mails")
+        .where("from", isEqualTo: userEmail)
+        .snapshots()
+        .map((s) {
+          log("📤 [SENT] Received ${s.docs.length} mails");
+          return s.docs.map((d) => MailModel.fromMap(d.data())).toList();
+        });
+  }
+
+  Future<void> toggleStar(String id, bool value) async {
+    log("⭐ [STAR] Mail $id → $value");
+    try {
+      await _fire.collection("mails").doc(id).update({"starred": value});
+    } catch (e) {
+      log("❌ [STAR][ERROR] $e");
+    }
+  }
+
+  Future<void> toggleImportant(String id, bool value) async {
+    log("❗ [IMPORTANT] Mail $id → $value");
+    try {
+      await _fire.collection("mails").doc(id).update({"important": value});
+    } catch (e) {
+      log("❌ [IMPORTANT][ERROR] $e");
+    }
+  }
+
+  Future<void> deleteMail(String id) async {
+    log("🗑 [DELETE] Marking mail $id as deleted");
+    try {
+      await _fire.collection("mails").doc(id).update({"isDeleted": true});
+    } catch (e) {
+      log("❌ [DELETE][ERROR] $e");
+    }
+  }
+}

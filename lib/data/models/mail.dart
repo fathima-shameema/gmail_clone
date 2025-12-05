@@ -1,34 +1,61 @@
-import 'package:equatable/equatable.dart';
-
-enum MailCategory { primary, promotion, social, spam, sent, bin }
-
-class Mail extends Equatable {
+class MailModel {
   final String id;
-  final String fromName;
-  final String fromEmail;
-  final List<String> to;
-  final List<String> cc;
+  final String from;
+  final String to;
+  final String? cc;
   final String subject;
   final String body;
-  final DateTime date;
+  final DateTime timestamp;
   final bool starred;
-  final MailCategory category;
-  final bool isRead;
+  final bool important;
+  final String category;
+  final bool isSent;
+  final bool isDeleted;
 
-  const Mail({
+  MailModel({
     required this.id,
-    required this.fromName,
-    required this.fromEmail,
+    required this.from,
     required this.to,
-    this.cc = const [],
+    this.cc,
     required this.subject,
     required this.body,
-    required this.date,
+    required this.timestamp,
     this.starred = false,
-    this.category = MailCategory.primary,
-    this.isRead = false,
+    this.important = false,
+    this.category = "primary",
+    this.isSent = true,
+    this.isDeleted = false,
   });
 
-  @override
-  List<Object?> get props => [id];
+  Map<String, dynamic> toMap() => {
+    "id": id,
+    "from": from,
+    "to": to,
+    "cc": cc,
+    "subject": subject,
+    "body": body,
+    "timestamp": timestamp.toIso8601String(),
+    "starred": starred,
+    "important": important,
+    "category": category,
+    "isSent": isSent,
+    "isDeleted": isDeleted,
+  };
+
+  factory MailModel.fromMap(Map<String, dynamic> map) {
+    return MailModel(
+      id: map["id"] ?? "",
+      from: map["from"] ?? "",
+      to: map["to"] ?? "",
+      cc: map["cc"],
+      subject: map["subject"] ?? "",
+      body: map["body"] ?? "",
+      timestamp: DateTime.tryParse(map["timestamp"] ?? "") ?? DateTime.now(),
+      starred: map["starred"] ?? false,
+      important: map["important"] ?? false,
+      category: map["category"] ?? "primary",
+      isSent: map["isSent"] ?? true,
+      isDeleted: map["isDeleted"] ?? false,
+    );
+  }
 }

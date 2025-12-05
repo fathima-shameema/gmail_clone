@@ -6,7 +6,7 @@ class AppSnackBarTheme {
   AppSnackBarTheme._();
 
   static SnackBarThemeData lightSnackBarTheme = SnackBarThemeData(
-    backgroundColor: AppColors.headingTexts,
+    backgroundColor: AppColors.liightGrey,
     elevation: 3,
     behavior: SnackBarBehavior.floating,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -14,7 +14,7 @@ class AppSnackBarTheme {
     insetPadding: const EdgeInsets.symmetric(horizontal: 5),
   );
   static SnackBarThemeData darkSnackBarTheme = SnackBarThemeData(
-    backgroundColor: AppColors.headingTexts,
+    backgroundColor: AppColors.darkgGey,
     elevation: 3,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     contentTextStyle: AppTextTheme.darkTextTheme.bodyMedium,
