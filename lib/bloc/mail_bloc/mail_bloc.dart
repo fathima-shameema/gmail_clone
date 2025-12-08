@@ -18,6 +18,20 @@ class MailBloc extends Bloc<MailEvent, MailState> {
     on<ToggleStarEvent>(_onToggleStar);
     on<DeleteMailEvent>(_onDeleteMail);
     on<LoadBinEvent>(_onLoadBin);
+    on<ResetMailStateEvent>((event, emit) {
+      emit(MailState());
+    });
+    on<ToggleMailInfoEvent>((event, emit) {
+      final current = Set<String>.from(state.expandedMailInfoIds);
+
+      if (current.contains(event.mailId)) {
+        current.remove(event.mailId);
+      } else {
+        current.add(event.mailId);
+      }
+
+      emit(state.copyWith(expandedMailInfoIds: current));
+    });
   }
 
   Future<void> _onSendMail(SendMailEvent event, Emitter<MailState> emit) async {

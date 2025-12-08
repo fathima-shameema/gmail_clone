@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gmail_clone/bloc/auth_bloc/auth_bloc.dart';
+import 'package:gmail_clone/bloc/mail_bloc/mail_bloc.dart';
 import 'package:gmail_clone/data/models/user_account.dart';
 
 class AccountSwitcherPanel extends StatefulWidget {
@@ -167,6 +168,8 @@ class _AccountSwitcherPanelState extends State<AccountSwitcherPanel>
       subtitle: Text(user.email),
       onTap: () {
         context.read<AuthBloc>().add(SwitchAccount(user));
+        context.read<MailBloc>().add(ResetMailStateEvent()); // ⭐ NEW
+        context.read<MailBloc>().add(LoadInboxEvent(user.email)); // ⭐ NEW
         Navigator.pop(context);
       },
     );

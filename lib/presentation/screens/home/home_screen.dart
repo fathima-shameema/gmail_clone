@@ -4,6 +4,7 @@ import 'package:gmail_clone/bloc/auth_bloc/auth_bloc.dart';
 import 'package:gmail_clone/bloc/mail_bloc/mail_bloc.dart';
 import 'package:gmail_clone/presentation/widgets/account_switcher_sheet.dart';
 import 'package:gmail_clone/presentation/widgets/gmail_drawer.dart';
+import 'package:gmail_clone/presentation/widgets/home_screen_appbar.dart';
 import 'package:gmail_clone/presentation/widgets/inbox_list.dart';
 import 'package:gmail_clone/resources/colors/colors.dart';
 
@@ -23,9 +24,11 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authState = context.read<AuthBloc>().state;
       if (authState.activeUser != null) {
-        context.read<MailBloc>().add(
-          LoadInboxEvent(authState.activeUser!.email),
-        );
+        final mailBloc = context.read<MailBloc>();
+
+        mailBloc.add(ResetMailStateEvent());
+        mailBloc.add(SetDrawerFilterEvent(DrawerFilterType.primary));
+        mailBloc.add(LoadInboxEvent(authState.activeUser!.email));
       }
     });
   }
@@ -64,10 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final authState = context.read<AuthBloc>().state;
     final activeUser = authState.activeUser;
 
-    // 1. Update filter
     mailBloc.add(SetDrawerFilterEvent(filterType));
-
-    // 2. Load required mailbox
     if (activeUser != null) {
       switch (filterType) {
         case DrawerFilterType.primary:
@@ -82,6 +82,12 @@ class _HomeScreenState extends State<HomeScreen> {
         case DrawerFilterType.starred:
         case DrawerFilterType.important:
         case DrawerFilterType.sent:
+          final activeUser = authState.activeUser;
+          if (activeUser != null) {
+            mailBloc.add(LoadSentEvent(activeUser.email));
+          }
+          break;
+
         case DrawerFilterType.spam:
           mailBloc.add(LoadInboxEvent(activeUser.email));
           break;
@@ -92,7 +98,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
         case DrawerFilterType.promotions:
         case DrawerFilterType.social:
-          // planned later
           break;
       }
     }
@@ -107,59 +112,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
       endDrawer: const AccountSwitcherPanel(),
 
-      appBar: AppBar(
-        centerTitle: true,
-        elevation: 0,
-        iconTheme: const IconThemeData(size: 23),
-        title: Container(
-          alignment: Alignment.center,
-          width: double.infinity,
-          height: 50,
-          decoration: BoxDecoration(
-            color:
-                systemTheme == Brightness.dark
-                    ? Colors.grey.shade800
-                    : Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(35),
-          ),
-          child: TextField(
-            controller: _searchController,
-            cursorColor: Colors.grey,
-            decoration: InputDecoration(
-              hint: Text(
-                textAlign: TextAlign.center,
-                "Search in mail",
-                style: TextStyle(fontSize: 18),
-              ),
-              border: OutlineInputBorder(borderSide: BorderSide.none),
-            ),
-          ),
-        ),
-        actions: [
-          Builder(
-            builder: (context) {
-              final activeUser = context.watch<AuthBloc>().state.activeUser;
-
-              return IconButton(
-                onPressed: () => Scaffold.of(context).openEndDrawer(),
-                icon: CircleAvatar(
-                  radius: 20,
-                  backgroundImage:
-                      activeUser?.photo != null
-                          ? NetworkImage(activeUser!.photo!)
-                          : null,
-                  child:
-                      activeUser?.photo == null
-                          ? Text(
-                            (activeUser?.email[0] ?? "?").toUpperCase(),
-                            style: const TextStyle(color: Colors.white),
-                          )
-                          : null,
-                ),
-              );
-            },
-          ),
-        ],
+      appBar: HomeScreenAppBar(
+        systemTheme: systemTheme,
+        searchController: _searchController,
       ),
 
       body: BlocBuilder<MailBloc, MailState>(

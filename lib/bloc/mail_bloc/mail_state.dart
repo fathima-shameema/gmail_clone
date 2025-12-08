@@ -19,6 +19,7 @@ class MailState {
   final String? error;
   final DrawerFilterType filterType;
   final List<MailModel> bin;
+  final Set<String> expandedMailInfoIds;
 
   MailState({
     this.inbox = const [],
@@ -27,6 +28,7 @@ class MailState {
     this.error,
     this.filterType = DrawerFilterType.primary,
     this.bin = const [],
+    this.expandedMailInfoIds = const {},
   });
 
   MailState copyWith({
@@ -36,6 +38,7 @@ class MailState {
     String? error,
     DrawerFilterType? filterType,
     List<MailModel>? bin,
+    Set<String>? expandedMailInfoIds,
   }) {
     return MailState(
       inbox: inbox ?? this.inbox,
@@ -44,6 +47,7 @@ class MailState {
       error: error,
       filterType: filterType ?? this.filterType,
       bin: bin ?? this.bin,
+      expandedMailInfoIds: expandedMailInfoIds ?? this.expandedMailInfoIds,
     );
   }
 }
