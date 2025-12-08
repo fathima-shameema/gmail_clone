@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gmail_clone/data/models/mail.dart';
 import 'package:gmail_clone/presentation/screens/home/compose_screen.dart';
 import 'package:gmail_clone/presentation/screens/home/home_screen.dart';
 import 'package:gmail_clone/presentation/screens/auth/signup_screen.dart';
@@ -20,7 +21,13 @@ class MyApp extends StatelessWidget {
         '/': (context) => SignupScreen(),
         '/Home': (context) => HomeScreen(),
         '/Compose mail': (context) => ComposeScreen(),
-        '/Mail details': (context) => MailDetailsScreen(),
+        '/Mail details': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments;
+          if (args is MailModel) {
+            return MailDetailsScreen(mail: args);
+          }
+          return const MailDetailsScreen();
+        },
       },
     );
   }

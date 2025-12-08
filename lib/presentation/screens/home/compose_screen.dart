@@ -48,7 +48,6 @@ class _ComposeScreenState extends State<ComposeScreen>
     super.dispose();
   }
 
-  // Email validation regex
   bool _isValidEmail(String email) {
     final emailRegex = RegExp(
       r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
@@ -57,13 +56,12 @@ class _ComposeScreenState extends State<ComposeScreen>
   }
 
   void _sendMail() {
-    // Get current from email (fallback to active user if not set)
     final authState = context.read<AuthBloc>().state;
-    final currentFrom = selectedFrom.isNotEmpty
-        ? selectedFrom
-        : (authState.activeUser?.email ?? "");
+    final currentFrom =
+        selectedFrom.isNotEmpty
+            ? selectedFrom
+            : (authState.activeUser?.email ?? "");
 
-    // Validate "from" field
     if (currentFrom.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please select a sender email")),
@@ -71,7 +69,6 @@ class _ComposeScreenState extends State<ComposeScreen>
       return;
     }
 
-    // Validate "to" field
     final toEmail = toCtrl.text.trim();
     if (toEmail.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -80,7 +77,6 @@ class _ComposeScreenState extends State<ComposeScreen>
       return;
     }
 
-    // Validate email format for "to" field
     if (!_isValidEmail(toEmail)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please enter a valid email address")),
@@ -88,16 +84,14 @@ class _ComposeScreenState extends State<ComposeScreen>
       return;
     }
 
-    // Validate "subject" field
     final subject = subjectCtrl.text.trim();
     if (subject.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Subject is required")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Subject is required")));
       return;
     }
 
-    // Validate "body" field
     final body = bodyCtrl.text.trim();
     if (body.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -106,7 +100,6 @@ class _ComposeScreenState extends State<ComposeScreen>
       return;
     }
 
-    // Validate CC field if provided
     final ccEmail = ccCtrl.text.trim();
     if (ccEmail.isNotEmpty && !_isValidEmail(ccEmail)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -115,12 +108,10 @@ class _ComposeScreenState extends State<ComposeScreen>
       return;
     }
 
-    // Generate unique mail ID using user's UID + timestamp
     final userUid = authState.activeUser?.uid ?? "";
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final mailId = userUid.isNotEmpty 
-        ? "${userUid}_$timestamp"
-        : "mail_$timestamp"; // Fallback if no UID available
+    final mailId =
+        userUid.isNotEmpty ? "${userUid}_$timestamp" : "mail_$timestamp";
 
     final mail = MailModel(
       id: mailId,
@@ -135,18 +126,7 @@ class _ComposeScreenState extends State<ComposeScreen>
 
     sendingSnack = ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(
-          children: const [
-            SizedBox(
-              height: 16,
-              width: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            SizedBox(width: 12),
-            Text("Sending…"),
-          ],
-        ),
-        duration: const Duration(hours: 1), // until manually closed
+        content: Text("Sending…"),
       ),
     );
 
@@ -170,7 +150,6 @@ class _ComposeScreenState extends State<ComposeScreen>
       child: BlocListener<MailBloc, MailState>(
         listener: (context, state) {
           if (isSending && !state.loading && state.error == null) {
-            // sending completed
             sendingSnack?.close();
             ScaffoldMessenger.of(
               context,

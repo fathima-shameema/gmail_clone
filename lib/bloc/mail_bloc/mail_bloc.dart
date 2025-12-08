@@ -12,7 +12,11 @@ class MailBloc extends Bloc<MailEvent, MailState> {
     on<SendMailEvent>(_onSendMail);
     on<LoadInboxEvent>(_onLoadInbox);
     on<LoadSentEvent>(_onLoadSent);
+    on<LoadAllInboxesEvent>(_onLoadAllInboxes);
+    on<LoadAllSentEvent>(_onLoadAllSent);
+    on<SetDrawerFilterEvent>(_onSetDrawerFilter);
     on<ToggleStarEvent>(_onToggleStar);
+    on<DeleteMailEvent>(_onDeleteMail);
   }
 
   Future<void> _onSendMail(SendMailEvent event, Emitter<MailState> emit) async {
@@ -30,15 +34,64 @@ class MailBloc extends Bloc<MailEvent, MailState> {
     LoadInboxEvent event,
     Emitter<MailState> emit,
   ) async {
-    repo.getInbox(event.email).listen((list) {
-      emit(state.copyWith(inbox: list));
-    });
+    await emit.forEach(
+      repo.getInbox(event.email),
+      onData: (List<MailModel> list) {
+        return state.copyWith(inbox: list);
+      },
+      onError: (error, stackTrace) {
+        return state.copyWith(error: error.toString());
+      },
+    );
   }
 
   Future<void> _onLoadSent(LoadSentEvent event, Emitter<MailState> emit) async {
-    repo.getSent(event.email).listen((list) {
-      emit(state.copyWith(sent: list));
-    });
+    await emit.forEach(
+      repo.getSent(event.email),
+      onData: (List<MailModel> list) {
+        return state.copyWith(sent: list);
+      },
+      onError: (error, stackTrace) {
+        return state.copyWith(error: error.toString());
+      },
+    );
+  }
+
+  Future<void> _onLoadAllInboxes(
+    LoadAllInboxesEvent event,
+    Emitter<MailState> emit,
+  ) async {
+    await emit.forEach(
+      repo.getAllInboxes(event.emails),
+      onData: (List<MailModel> list) {
+        return state.copyWith(inbox: list);
+      },
+      onError: (error, stackTrace) {
+        return state.copyWith(error: error.toString());
+      },
+    );
+  }
+
+  Future<void> _onLoadAllSent(
+    LoadAllSentEvent event,
+    Emitter<MailState> emit,
+  ) async {
+    await emit.forEach(
+      repo.getAllSent(event.emails),
+      onData: (List<MailModel> list) {
+        return state.copyWith(sent: list);
+      },
+      onError: (error, stackTrace) {
+        return state.copyWith(error: error.toString());
+      },
+    );
+  }
+
+  void _onSetDrawerFilter(
+    SetDrawerFilterEvent event,
+    Emitter<MailState> emit,
+  ) {
+    emit(state.copyWith(filterType: event.filterType));
   }
 
   Future<void> _onToggleStar(
@@ -46,5 +99,12 @@ class MailBloc extends Bloc<MailEvent, MailState> {
     Emitter<MailState> emit,
   ) async {
     await repo.toggleStar(event.id, event.value);
+  }
+
+  Future<void> _onDeleteMail(
+    DeleteMailEvent event,
+    Emitter<MailState> emit,
+  ) async {
+    await repo.deleteMail(event.id);
   }
 }

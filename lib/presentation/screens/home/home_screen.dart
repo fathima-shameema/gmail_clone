@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gmail_clone/bloc/auth_bloc/auth_bloc.dart';
+import 'package:gmail_clone/bloc/mail_bloc/mail_bloc.dart';
 import 'package:gmail_clone/presentation/widgets/account_switcher_sheet.dart';
 import 'package:gmail_clone/presentation/widgets/gmail_drawer.dart';
 import 'package:gmail_clone/presentation/widgets/inbox_list.dart';
@@ -15,6 +16,49 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _searchController = TextEditingController();
+  
+  @override
+  void initState() {
+    super.initState();
+    // Load mails when screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authState = context.read<AuthBloc>().state;
+      if (authState.activeUser != null) {
+        // Only load inbox mails (mails where to == activeUser.email)
+        context.read<MailBloc>().add(LoadInboxEvent(authState.activeUser!.email));
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  String _getFilterTitle(DrawerFilterType filterType) {
+    switch (filterType) {
+      case DrawerFilterType.allInboxes:
+        return 'All inboxes';
+      case DrawerFilterType.primary:
+        return 'Primary';
+      case DrawerFilterType.promotions:
+        return 'Promotions';
+      case DrawerFilterType.social:
+        return 'Social';
+      case DrawerFilterType.starred:
+        return 'Starred';
+      case DrawerFilterType.important:
+        return 'Important';
+      case DrawerFilterType.sent:
+        return 'Sent';
+      case DrawerFilterType.spam:
+        return 'Spam';
+      case DrawerFilterType.bin:
+        return 'Bin';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final systemTheme = MediaQuery.of(context).platformBrightness;
@@ -79,23 +123,39 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
 
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 20.0),
-            child: Text(
-              'Primary',
-              style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                color:
-                    systemTheme == Brightness.dark
-                        ? AppColors.liightGrey
-                        : AppColors.darkgGey,
-              ),
-            ),
-          ),
-          const InboxList(),
-        ],
+      body: BlocListener<AuthBloc, AuthState>(
+        listener: (context, authState) {
+          // Reload mails when active user changes
+          if (authState.activeUser != null) {
+            // Only load inbox mails (mails where to == activeUser.email)
+            context.read<MailBloc>().add(LoadInboxEvent(authState.activeUser!.email));
+          }
+        },
+        child: BlocBuilder<MailBloc, MailState>(
+          builder: (context, mailState) {
+            // Get the display name for the current filter
+            final title = _getFilterTitle(mailState.filterType);
+            
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 20.0),
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                      color:
+                          systemTheme == Brightness.dark
+                              ? AppColors.liightGrey
+                              : AppColors.darkgGey,
+                    ),
+                  ),
+                ),
+                const InboxList(),
+              ],
+            );
+          },
+        ),
       ),
 
       floatingActionButton: FloatingActionButton.extended(
