@@ -63,11 +63,9 @@ class InboxList extends StatelessWidget {
                 break;
               case DrawerFilterType.promotions:
               case DrawerFilterType.social:
-                // Leave blank for now
                 allMails = [];
                 break;
               case DrawerFilterType.starred:
-                // Show only starred mails
                 if (activeUser != null) {
                   allMails =
                       mailState.inbox
@@ -80,11 +78,23 @@ class InboxList extends StatelessWidget {
                 }
                 break;
               case DrawerFilterType.important:
-              case DrawerFilterType.sent:
-              case DrawerFilterType.spam:
-              case DrawerFilterType.bin:
-                // Will be implemented later
                 allMails = [];
+                break;
+
+              case DrawerFilterType.sent:
+                if (activeUser != null) {
+                  allMails = List<MailModel>.from(mailState.sent);
+                }
+                break;
+
+              case DrawerFilterType.spam:
+                allMails = [];
+                break;
+
+              case DrawerFilterType.bin:
+                if (activeUser != null) {
+                  allMails = List<MailModel>.from(mailState.bin);
+                }
                 break;
             }
 

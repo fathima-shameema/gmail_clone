@@ -18,6 +18,7 @@ class MailState {
   final bool loading;
   final String? error;
   final DrawerFilterType filterType;
+  final List<MailModel> bin;
 
   MailState({
     this.inbox = const [],
@@ -25,6 +26,7 @@ class MailState {
     this.loading = false,
     this.error,
     this.filterType = DrawerFilterType.primary,
+    this.bin = const [],
   });
 
   MailState copyWith({
@@ -33,6 +35,7 @@ class MailState {
     bool? loading,
     String? error,
     DrawerFilterType? filterType,
+    List<MailModel>? bin,
   }) {
     return MailState(
       inbox: inbox ?? this.inbox,
@@ -40,6 +43,7 @@ class MailState {
       loading: loading ?? this.loading,
       error: error,
       filterType: filterType ?? this.filterType,
+      bin: bin ?? this.bin,
     );
   }
 }

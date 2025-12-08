@@ -17,6 +17,7 @@ class MailBloc extends Bloc<MailEvent, MailState> {
     on<SetDrawerFilterEvent>(_onSetDrawerFilter);
     on<ToggleStarEvent>(_onToggleStar);
     on<DeleteMailEvent>(_onDeleteMail);
+    on<LoadBinEvent>(_onLoadBin);
   }
 
   Future<void> _onSendMail(SendMailEvent event, Emitter<MailState> emit) async {
@@ -87,10 +88,7 @@ class MailBloc extends Bloc<MailEvent, MailState> {
     );
   }
 
-  void _onSetDrawerFilter(
-    SetDrawerFilterEvent event,
-    Emitter<MailState> emit,
-  ) {
+  void _onSetDrawerFilter(SetDrawerFilterEvent event, Emitter<MailState> emit) {
     emit(state.copyWith(filterType: event.filterType));
   }
 
@@ -106,5 +104,13 @@ class MailBloc extends Bloc<MailEvent, MailState> {
     Emitter<MailState> emit,
   ) async {
     await repo.deleteMail(event.id);
+  }
+
+  Future<void> _onLoadBin(LoadBinEvent event, Emitter<MailState> emit) async {
+    await emit.forEach(
+      repo.getDeleted(event.email),
+      onData: (list) => state.copyWith(bin: list),
+      onError: (error, stackTrace) => state.copyWith(error: error.toString()),
+    );
   }
 }

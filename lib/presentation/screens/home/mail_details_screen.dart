@@ -23,16 +23,12 @@ class _MailDetailsScreenState extends State<MailDetailsScreen> {
     final yesterday = today.subtract(const Duration(days: 1));
 
     if (mailDate == today) {
-      // Today: show time with AM/PM
       return DateFormat('h:mm a').format(dateTime);
     } else if (mailDate == yesterday) {
-      // Yesterday
       return 'Yesterday';
     } else if (dateTime.year == now.year) {
-      // This year but not today/yesterday: show month and date
       return DateFormat('MMM d').format(dateTime);
     } else {
-      // Past year: show month, date, and year
       return DateFormat('MMM d, y').format(dateTime);
     }
   }
@@ -45,7 +41,6 @@ class _MailDetailsScreenState extends State<MailDetailsScreen> {
 
     return BlocBuilder<MailBloc, MailState>(
       builder: (context, mailState) {
-        // Find the updated mail from the bloc state
         MailModel? currentMail = widget.mail;
         if (widget.mail != null) {
           currentMail = mailState.inbox.firstWhere(

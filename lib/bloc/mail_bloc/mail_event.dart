@@ -42,3 +42,8 @@ class DeleteMailEvent extends MailEvent {
   final String id;
   DeleteMailEvent(this.id);
 }
+
+class LoadBinEvent extends MailEvent {
+  final String email;
+  LoadBinEvent(this.email);
+}
