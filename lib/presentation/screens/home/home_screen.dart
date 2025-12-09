@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gmail_clone/bloc/auth_bloc/auth_bloc.dart';
 import 'package:gmail_clone/bloc/mail_bloc/mail_bloc.dart';
 import 'package:gmail_clone/presentation/widgets/account_switcher_sheet.dart';
+import 'package:gmail_clone/presentation/widgets/custom_loader.dart';
 import 'package:gmail_clone/presentation/widgets/gmail_drawer.dart';
 import 'package:gmail_clone/presentation/widgets/home_screen_appbar.dart';
 import 'package:gmail_clone/presentation/widgets/inbox_list.dart';
@@ -130,6 +131,30 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context, mailState) {
           final title = _getFilterTitle(mailState.filterType);
 
+          bool isLoading = false;
+          switch (mailState.filterType) {
+            case DrawerFilterType.primary:
+              isLoading = mailState.inboxLoading;
+              break;
+            case DrawerFilterType.allInboxes:
+              isLoading = mailState.allInboxLoading;
+              break;
+            case DrawerFilterType.sent:
+              isLoading = mailState.sentLoading;
+              break;
+            case DrawerFilterType.starred:
+              isLoading = mailState.inboxLoading || mailState.sentLoading;
+              break;
+            case DrawerFilterType.important:
+              isLoading = mailState.importantLoading;
+              break;
+            case DrawerFilterType.bin:
+              isLoading = mailState.binLoading;
+              break;
+            default:
+              isLoading = false;
+          }
+
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -139,13 +164,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   title,
                   style: Theme.of(context).textTheme.bodySmall!.copyWith(
                     color:
-                        systemTheme == Brightness.dark
+                        Theme.of(context).brightness == Brightness.dark
                             ? AppColors.liightGrey
                             : AppColors.darkgGey,
                   ),
                 ),
               ),
-              const InboxList(),
+
+              if (isLoading)
+                const Expanded(
+                  child: Center(child: CustomLoader()),
+                )
+              else
+                const InboxList(),
             ],
           );
         },

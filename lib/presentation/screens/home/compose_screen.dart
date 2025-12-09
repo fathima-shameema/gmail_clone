@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gmail_clone/bloc/auth_bloc/auth_bloc.dart';
+import 'package:gmail_clone/bloc/compose_bloc/compose_bloc.dart';
 import 'package:gmail_clone/bloc/mail_bloc/mail_bloc.dart';
 import 'package:gmail_clone/data/models/mail.dart';
+import 'package:gmail_clone/presentation/widgets/compose_appbar.dart';
+import 'package:gmail_clone/presentation/widgets/compose_body.dart';
 
 class ComposeScreen extends StatefulWidget {
   const ComposeScreen({super.key});
@@ -13,30 +16,12 @@ class ComposeScreen extends StatefulWidget {
 
 class _ComposeScreenState extends State<ComposeScreen>
     with TickerProviderStateMixin {
-  bool expandFrom = false;
-  bool expandTo = false;
-
-  String selectedFrom = "";
-
   final TextEditingController toCtrl = TextEditingController();
   final TextEditingController ccCtrl = TextEditingController();
   final TextEditingController subjectCtrl = TextEditingController();
   final TextEditingController bodyCtrl = TextEditingController();
 
-  final FocusNode bodyFocus = FocusNode();
-
-  bool isSending = false;
   ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? sendingSnack;
-
-  InputDecoration noBorderDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: Colors.grey, fontSize: 20),
-      border: InputBorder.none,
-      contentPadding: const EdgeInsets.symmetric(vertical: 5),
-      isDense: true,
-    );
-  }
 
   @override
   void dispose() {
@@ -44,7 +29,6 @@ class _ComposeScreenState extends State<ComposeScreen>
     ccCtrl.dispose();
     subjectCtrl.dispose();
     bodyCtrl.dispose();
-    bodyFocus.dispose();
     super.dispose();
   }
 
@@ -55,11 +39,12 @@ class _ComposeScreenState extends State<ComposeScreen>
     return emailRegex.hasMatch(email);
   }
 
-  void _sendMail() {
+  void _sendMail(BuildContext context) {
     final authState = context.read<AuthBloc>().state;
+    final composeState = context.read<ComposeBloc>().state;
     final currentFrom =
-        selectedFrom.isNotEmpty
-            ? selectedFrom
+        composeState.selectedFrom.isNotEmpty
+            ? composeState.selectedFrom
             : (authState.activeUser?.email ?? "");
 
     if (currentFrom.isEmpty) {
@@ -108,7 +93,6 @@ class _ComposeScreenState extends State<ComposeScreen>
       return;
     }
 
-    // When dispatching SendMailEvent:
     final userUid = authState.activeUser?.uid ?? '';
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final mailId = "${userUid}_$timestamp";
@@ -121,276 +105,69 @@ class _ComposeScreenState extends State<ComposeScreen>
       subject: subject,
       body: body,
       timestamp: DateTime.now(),
-      userStatus: {}, // repo will set proper userStatus
-      userIds: [], // repo will set userIds
+      userStatus: {},
+      userIds: [],
     );
 
-    context.read<MailBloc>().add(SendMailEvent(mail, userUid));
+    context.read<ComposeBloc>().add(StartSendingEvent());
 
     sendingSnack = ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text("Sending…")));
+    ).showSnackBar(const SnackBar(content: Text("Sending…")));
 
-    setState(() => isSending = true);
+    context.read<MailBloc>().add(SendMailEvent(mail, userUid));
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, authState) {
-        if (authState.activeUser != null &&
-            (selectedFrom.isEmpty ||
-                selectedFrom == authState.activeUser!.email)) {
-          setState(() {
-            selectedFrom = authState.activeUser!.email;
-          });
-        }
-      },
-      child: BlocListener<MailBloc, MailState>(
-        listener: (context, state) {
-          if (isSending && !state.loading && state.error == null) {
-            sendingSnack?.close();
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text("Sent")));
-            Navigator.pop(context);
-          }
+    final initialFrom = context.read<AuthBloc>().state.activeUser?.email ?? "";
 
-          if (state.error != null) {
-            sendingSnack?.close();
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text("Error: ${state.error}")));
-            setState(() => isSending = false);
+    return BlocProvider(
+      create: (_) => ComposeBloc(initialFrom: initialFrom),
+      child: BlocListener<AuthBloc, AuthState>(
+        listener: (context, authState) {
+          if (authState.activeUser != null) {
+            final compose = context.read<ComposeBloc>();
+            final currentSelected = compose.state.selectedFrom;
+            final newDefault = authState.activeUser!.email;
+            if (currentSelected.isEmpty || currentSelected == newDefault) {
+              compose.add(SetSelectedFromEvent(newDefault));
+            }
           }
         },
-        child: Scaffold(
-          appBar: AppBar(
-            elevation: 0.4,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, size: 23),
-              onPressed: () => Navigator.pop(context),
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.attach_file, size: 23),
-                onPressed: () {},
-              ),
-              IconButton(
-                icon: const Icon(Icons.send_outlined, size: 23),
-                onPressed: isSending ? null : _sendMail,
-              ),
-              IconButton(
-                icon: const Icon(Icons.more_vert, size: 23),
-                onPressed: () {},
-              ),
-            ],
-          ),
+        child: BlocListener<MailBloc, MailState>(
+          listener: (context, mailState) {
+            final compose = context.read<ComposeBloc>();
+            if (compose.state.isSending &&
+                !mailState.loading &&
+                mailState.error == null) {
+              sendingSnack?.close();
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text("Sent")));
+              compose.add(StopSendingEvent());
+              Navigator.pop(context);
+            }
 
-          body: BlocBuilder<AuthBloc, AuthState>(
-            builder: (context, authState) {
-              final activeUser = authState.activeUser;
-              final allAccounts = authState.accounts;
-
-              final otherAccounts =
-                  allAccounts
-                      .where((acc) => acc.uid != activeUser?.uid)
-                      .toList();
-
-              final currentFrom =
-                  selectedFrom.isNotEmpty
-                      ? selectedFrom
-                      : (activeUser?.email ?? "");
-
-              final showDropdown = otherAccounts.isNotEmpty;
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  InkWell(
-                    onTap:
-                        showDropdown
-                            ? () => setState(() => expandFrom = !expandFrom)
-                            : null,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                      child: Row(
-                        children: [
-                          Text(
-                            "From",
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(width: 20),
-
-                          Expanded(
-                            child: Text(
-                              currentFrom,
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          ),
-
-                          if (showDropdown)
-                            AnimatedRotation(
-                              turns: expandFrom ? 0.5 : 0,
-                              duration: const Duration(milliseconds: 250),
-                              child: const Icon(
-                                Icons.keyboard_arrow_down,
-                                size: 22,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  AnimatedCrossFade(
-                    duration: const Duration(milliseconds: 300),
-                    crossFadeState:
-                        expandFrom
-                            ? CrossFadeState.showFirst
-                            : CrossFadeState.showSecond,
-
-                    firstChild: Column(
-                      children:
-                          otherAccounts.map((acc) {
-                            return InkWell(
-                              onTap: () {
-                                setState(() {
-                                  selectedFrom = acc.email;
-                                  expandFrom = false;
-                                });
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.fromLTRB(
-                                  32,
-                                  10,
-                                  16,
-                                  10,
-                                ),
-                                alignment: Alignment.centerLeft,
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 14,
-                                      backgroundImage:
-                                          acc.photo != null
-                                              ? NetworkImage(acc.photo!)
-                                              : null,
-                                      child:
-                                          acc.photo == null
-                                              ? Text(
-                                                acc.email[0].toUpperCase(),
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                ),
-                                              )
-                                              : null,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(acc.email),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                    ),
-                    secondChild: const SizedBox.shrink(),
-                  ),
-
-                  const Divider(height: 1),
-
-                  InkWell(
-                    onTap: () => setState(() => expandTo = !expandTo),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-                      child: Row(
-                        children: [
-                          Text(
-                            "To",
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(width: 20),
-                          Expanded(
-                            child: TextField(
-                              controller: toCtrl,
-                              decoration: noBorderDecoration(""),
-                            ),
-                          ),
-                          AnimatedRotation(
-                            turns: expandTo ? 0.5 : 0,
-                            duration: const Duration(milliseconds: 250),
-                            child: const Icon(
-                              Icons.keyboard_arrow_down,
-                              size: 22,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const Divider(height: 1),
-
-                  AnimatedCrossFade(
-                    duration: const Duration(milliseconds: 250),
-                    crossFadeState:
-                        expandTo
-                            ? CrossFadeState.showFirst
-                            : CrossFadeState.showSecond,
-                    firstChild: Column(
-                      children: [
-                        _fieldRow("Cc", ccCtrl),
-                        const Divider(height: 1),
-                      ],
-                    ),
-                    secondChild: const SizedBox.shrink(),
-                  ),
-
-                  _fieldRow("Subject", subjectCtrl),
-                  const Divider(height: 1),
-
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: TextField(
-                        controller: bodyCtrl,
-                        focusNode: bodyFocus,
-                        maxLines: null,
-                        expands: true,
-                        decoration: noBorderDecoration(
-                          bodyFocus.hasFocus || bodyCtrl.text.isNotEmpty
-                              ? ""
-                              : "Compose email",
-                        ),
-                        keyboardType: TextInputType.multiline,
-                        onChanged: (_) => setState(() {}),
-                        onTap: () => setState(() {}),
-                      ),
-                    ),
-                  ),
-                ],
+            if (mailState.error != null) {
+              sendingSnack?.close();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Error: ${mailState.error}")),
               );
-            },
+              compose.add(StopSendingEvent());
+            }
+          },
+          child: Scaffold(
+            appBar: ComposeAppbar(onSent: _sendMail),
+
+            body: ComposeBody(
+              toController: toCtrl,
+              ccController: ccCtrl,
+              subjectController: subjectCtrl,
+              bodyController: bodyCtrl,
+            ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _fieldRow(String label, TextEditingController controller) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-      child: Row(
-        children: [
-          Text(label, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(width: 20),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              decoration: noBorderDecoration(""),
-            ),
-          ),
-        ],
       ),
     );
   }

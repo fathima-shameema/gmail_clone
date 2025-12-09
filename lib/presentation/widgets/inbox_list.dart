@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gmail_clone/bloc/auth_bloc/auth_bloc.dart';
 import 'package:gmail_clone/bloc/mail_bloc/mail_bloc.dart';
 import 'package:gmail_clone/data/models/mail.dart';
+import 'package:gmail_clone/presentation/widgets/custom_loader.dart';
 import 'package:gmail_clone/presentation/widgets/inbox_data.dart';
 import 'package:intl/intl.dart';
 
@@ -36,6 +37,37 @@ class InboxList extends StatelessWidget {
 
         return BlocBuilder<MailBloc, MailState>(
           builder: (context, mailState) {
+            bool isLoading = false;
+
+            switch (mailState.filterType) {
+              case DrawerFilterType.primary:
+                isLoading = mailState.inboxLoading;
+                break;
+              case DrawerFilterType.allInboxes:
+                isLoading = mailState.allInboxLoading;
+                break;
+              case DrawerFilterType.sent:
+                isLoading = mailState.sentLoading;
+                break;
+              case DrawerFilterType.starred:
+                isLoading = mailState.inboxLoading || mailState.sentLoading;
+                break;
+              case DrawerFilterType.important:
+                isLoading = mailState.importantLoading;
+                break;
+              case DrawerFilterType.bin:
+                isLoading = mailState.binLoading;
+                break;
+              default:
+                isLoading = false;
+            }
+
+            if (isLoading) {
+              return const Expanded(
+                child: Center(child: CustomLoader()),
+              );
+            }
+
             List<MailModel> allMails = [];
             bool isBin = false;
             bool isSent = mailState.filterType == DrawerFilterType.sent;

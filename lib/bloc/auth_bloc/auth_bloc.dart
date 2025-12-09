@@ -15,6 +15,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<SignInWithGoogle>(_onSignIn);
     on<SwitchAccount>(_onSwitch);
     on<SignOut>(_onSignOut);
+    add(LoadSavedAccounts());
   }
   Future<void> _onLoadSaved(
     LoadSavedAccounts event,

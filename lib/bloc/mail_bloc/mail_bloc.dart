@@ -37,35 +37,61 @@ class MailBloc extends Bloc<MailEvent, MailState> {
     }
   }
 
-  Future<void> _onLoadInbox(LoadInboxEvent event, Emitter<MailState> emit) async {
+  Future<void> _onLoadInbox(
+    LoadInboxEvent event,
+    Emitter<MailState> emit,
+  ) async {
+    emit(state.copyWith(inboxLoading: true));
+
     await emit.forEach<List<MailModel>>(
       repo.getInbox(event.email, event.uid),
-      onData: (list) => state.copyWith(inbox: list),
-      onError: (err, st) => state.copyWith(error: err.toString()),
+      onData: (list) => state.copyWith(inbox: list, inboxLoading: false),
+
+      onError:
+          (err, st) =>
+              state.copyWith(error: err.toString(), inboxLoading: false),
     );
   }
 
   Future<void> _onLoadSent(LoadSentEvent event, Emitter<MailState> emit) async {
+    emit(state.copyWith(sentLoading: true));
+
     await emit.forEach<List<MailModel>>(
       repo.getSent(event.email, event.uid),
-      onData: (list) => state.copyWith(sent: list),
-      onError: (err, st) => state.copyWith(error: err.toString()),
+      onData: (list) => state.copyWith(sent: list, sentLoading: false),
+      onError:
+          (err, st) =>
+              state.copyWith(error: err.toString(), sentLoading: false),
     );
   }
 
-  Future<void> _onLoadAllInboxes(LoadAllInboxesEvent event, Emitter<MailState> emit) async {
+  Future<void> _onLoadAllInboxes(
+    LoadAllInboxesEvent event,
+    Emitter<MailState> emit,
+  ) async {
+    emit(state.copyWith(allInboxLoading: true));
+
     await emit.forEach<List<MailModel>>(
       repo.getAllInboxes(event.emails, event.uid),
-      onData: (list) => state.copyWith(inbox: list),
-      onError: (err, st) => state.copyWith(error: err.toString()),
+      onData: (list) => state.copyWith(inbox: list, allInboxLoading: false),
+      onError:
+          (err, st) =>
+              state.copyWith(error: err.toString(), allInboxLoading: false),
     );
   }
 
-  Future<void> _onLoadAllSent(LoadAllSentEvent event, Emitter<MailState> emit) async {
+  Future<void> _onLoadAllSent(
+    LoadAllSentEvent event,
+    Emitter<MailState> emit,
+  ) async {
+    emit(state.copyWith(allSentLoading: true));
+
     await emit.forEach<List<MailModel>>(
       repo.getAllSent(event.emails, event.uid),
-      onData: (list) => state.copyWith(sent: list),
-      onError: (err, st) => state.copyWith(error: err.toString()),
+      onData: (list) => state.copyWith(sent: list, allSentLoading: false),
+      onError:
+          (err, st) =>
+              state.copyWith(error: err.toString(), allSentLoading: false),
     );
   }
 
@@ -77,7 +103,10 @@ class MailBloc extends Bloc<MailEvent, MailState> {
     await repo.toggleStar(e.mailId, e.uid, e.value);
   }
 
-  Future<void> _onToggleImportant(ToggleImportantEvent e, Emitter<MailState> emit) async {
+  Future<void> _onToggleImportant(
+    ToggleImportantEvent e,
+    Emitter<MailState> emit,
+  ) async {
     await repo.toggleImportant(e.mailId, e.uid, e.value);
   }
 
@@ -86,18 +115,26 @@ class MailBloc extends Bloc<MailEvent, MailState> {
   }
 
   Future<void> _onLoadBin(LoadBinEvent e, Emitter<MailState> emit) async {
+    emit(state.copyWith(binLoading: true));
+
     await emit.forEach<List<MailModel>>(
       repo.getBin(e.uid),
-      onData: (list) => state.copyWith(bin: list),
-      onError: (err, st) => state.copyWith(error: err.toString()),
+      onData: (list) => state.copyWith(bin: list, binLoading: false),
+      onError:
+          (err, st) => state.copyWith(error: err.toString(), binLoading: false),
     );
   }
 
-  Future<void> _onLoadImportant(LoadImportantEvent e, Emitter<MailState> emit) async {
+  Future<void> _onLoadImportant(
+    LoadImportantEvent e,
+    Emitter<MailState> emit,
+  ) async {
+    emit(state.copyWith(importantLoading: true));
+
     await emit.forEach<List<MailModel>>(
       repo.getImportant(e.uid),
-      onData: (list) => state.copyWith(important: list),
-      onError: (err, st) => state.copyWith(error: err.toString()),
+      onData: (list) => state.copyWith(important: list, importantLoading: false),
+      onError: (err, st) => state.copyWith(error: err.toString(),importantLoading: false),
     );
   }
 
@@ -106,7 +143,10 @@ class MailBloc extends Bloc<MailEvent, MailState> {
     add(LoadBinEvent(e.uid));
   }
 
-  Future<void> _onAutoCleanBin(AutoCleanBinEvent e, Emitter<MailState> emit) async {
+  Future<void> _onAutoCleanBin(
+    AutoCleanBinEvent e,
+    Emitter<MailState> emit,
+  ) async {
     await repo.autoCleanBin(e.uid);
     add(LoadBinEvent(e.uid));
   }

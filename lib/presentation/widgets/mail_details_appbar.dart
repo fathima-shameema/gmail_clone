@@ -26,36 +26,64 @@ class MailDetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
 
     return AppBar(
       elevation: 0,
-      leading: IconButton(icon: const Icon(Icons.arrow_back, size: 23), onPressed: () => Navigator.pop(context)),
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, size: 23),
+        onPressed: () => Navigator.pop(context),
+      ),
       actions: [
         if (mailData != null)
           mailData.isDeleted(uid)
               ? const SizedBox.shrink()
               : IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 23),
-                  onPressed: () {
-                    context.read<MailBloc>().add(DeleteMailEvent(mailData.id, uid));
-                    Navigator.pop(context);
-                  },
-                ),
+                icon: const Icon(Icons.delete_outline, size: 23),
+                onPressed: () {
+                  context.read<MailBloc>().add(
+                    DeleteMailEvent(mailData.id, uid),
+                  );
+                  Navigator.pop(context);
+                  context.read<MailBloc>().add(ResetMailStateEvent());
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Deleted')));
+                },
+              ),
         if (mailData != null)
           PopupMenuButton(
             position: PopupMenuPosition.under,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                child: Row(
-                  children: [
-                    Icon(mailData.isImportant(uid) ? Icons.label_important : Icons.label_important_outline, size: 20),
-                    const SizedBox(width: 15),
-                    Text(mailData.isImportant(uid) ? "Mark as not important" : "Mark as important", style: const TextStyle(fontSize: 15)),
-                  ],
-                ),
-                onTap: () {
-                  context.read<MailBloc>().add(ToggleImportantEvent(mailData.id, uid, !mailData.isImportant(uid)));
-                },
-              ),
-            ],
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            itemBuilder:
+                (context) => [
+                  PopupMenuItem(
+                    child: Row(
+                      children: [
+                        Icon(
+                          mailData.isImportant(uid)
+                              ? Icons.label_important
+                              : Icons.label_important_outline,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 15),
+                        Text(
+                          mailData.isImportant(uid)
+                              ? "Mark as not important"
+                              : "Mark as important",
+                          style: const TextStyle(fontSize: 15),
+                        ),
+                      ],
+                    ),
+                    onTap: () {
+                      context.read<MailBloc>().add(
+                        ToggleImportantEvent(
+                          mailData.id,
+                          uid,
+                          !mailData.isImportant(uid),
+                        ),
+                      );
+                    },
+                  ),
+                ],
             icon: const Icon(Icons.more_vert, size: 23),
           ),
       ],

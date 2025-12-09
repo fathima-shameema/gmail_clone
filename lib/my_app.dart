@@ -5,6 +5,7 @@ import 'package:gmail_clone/presentation/screens/home/home_screen.dart';
 import 'package:gmail_clone/presentation/screens/auth/signup_screen.dart';
 import 'package:gmail_clone/presentation/screens/home/mail_details_screen.dart';
 import 'package:gmail_clone/resources/themes/theme.dart';
+import 'package:gmail_clone/root_screen.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -16,9 +17,8 @@ class MyApp extends StatelessWidget {
       themeMode: ThemeMode.system,
       darkTheme: AppTheme.darkTheme,
       theme: AppTheme.lightTheme,
-      initialRoute: '/',
+      home: const RootScreen(), 
       routes: {
-        '/': (context) => SignupScreen(),
         '/Home': (context) => HomeScreen(),
         '/Compose mail': (context) => ComposeScreen(),
         '/Mail details': (context) {
