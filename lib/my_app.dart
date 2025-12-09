@@ -23,10 +23,15 @@ class MyApp extends StatelessWidget {
         '/Compose mail': (context) => ComposeScreen(),
         '/Mail details': (context) {
           final args = ModalRoute.of(context)!.settings.arguments;
-          if (args is MailModel) {
-            return MailDetailsScreen(mail: args);
+
+          if (args is Map) {
+            final mail = args["mail"] as MailModel?;
+            final isSent = args["isSent"] as bool? ?? false;
+
+            return MailDetailsScreen(mail: mail, isSent: isSent);
           }
-          return const MailDetailsScreen();
+
+          return const MailDetailsScreen(isSent: false);
         },
       },
     );

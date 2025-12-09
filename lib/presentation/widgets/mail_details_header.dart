@@ -11,6 +11,7 @@ class MailDetailsHeader extends StatelessWidget {
   final Color grey;
   final MailModel? mail;
   final Brightness systemTheme;
+  final bool isSent;
 
   const MailDetailsHeader({
     super.key,
@@ -19,6 +20,7 @@ class MailDetailsHeader extends StatelessWidget {
     required this.grey,
     this.mail,
     required this.systemTheme,
+    required this.isSent,
   });
 
   @override
@@ -80,7 +82,9 @@ class MailDetailsHeader extends StatelessWidget {
                       child: Row(
                         children: [
                           Text(
-                            "to me",
+                            isSent
+                                ? 'to ${currentMail!.to.split('@')[0]}'
+                                : "to me",
                             style: TextStyle(fontSize: 14, color: grey),
                           ),
 

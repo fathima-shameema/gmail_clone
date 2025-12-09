@@ -47,8 +47,22 @@ class LoadBinEvent extends MailEvent {
   final String email;
   LoadBinEvent(this.email);
 }
+
 class ResetMailStateEvent extends MailEvent {}
+
 class ToggleMailInfoEvent extends MailEvent {
-  final String mailId; 
+  final String mailId;
   ToggleMailInfoEvent(this.mailId);
 }
+
+class ToggleImportantEvent extends MailEvent {
+  final String id;
+  final bool value;
+
+  ToggleImportantEvent(this.id, this.value);
+}
+class LoadImportantEvent extends MailEvent {
+  final String email;
+  LoadImportantEvent(this.email);
+}
+

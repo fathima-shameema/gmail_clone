@@ -5,6 +5,7 @@ import 'package:gmail_clone/presentation/widgets/mail_tile.dart';
 
 class InboxData extends StatelessWidget {
   final bool isBin;
+  final bool isSent;
   final List<MailModel> allMails;
   final Brightness systemTheme;
   final Function(String) getInitials;
@@ -17,7 +18,7 @@ class InboxData extends StatelessWidget {
     required this.systemTheme,
     required this.getInitials,
     required this.formatTime,
-    required this.activeUser,
+    required this.activeUser, required this.isSent,
   });
 
   @override

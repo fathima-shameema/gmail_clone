@@ -42,7 +42,7 @@ class InboxList extends StatelessWidget {
           builder: (context, mailState) {
             List<MailModel> allMails = [];
             bool isBin = false;
-
+            bool isSent = mailState.filterType == DrawerFilterType.sent;
             switch (mailState.filterType) {
               case DrawerFilterType.allInboxes:
                 final allMailsMap = <String, MailModel>{};
@@ -76,7 +76,7 @@ class InboxList extends StatelessWidget {
                 }
                 break;
               case DrawerFilterType.important:
-                allMails = [];
+                allMails = List<MailModel>.from(mailState.important);
                 break;
 
               case DrawerFilterType.sent:
@@ -122,6 +122,7 @@ class InboxList extends StatelessWidget {
             }
 
             return InboxData(
+              isSent: isSent,
               isBin: isBin,
               allMails: allMails,
               systemTheme: systemTheme,

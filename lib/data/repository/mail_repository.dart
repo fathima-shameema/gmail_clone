@@ -135,6 +135,7 @@ class MailRepository {
       await _fire.collection("mails").doc(id).update({"important": value});
     } catch (e) {
       log("❌ [IMPORTANT][ERROR] $e");
+      rethrow;
     }
   }
 
@@ -158,5 +159,14 @@ class MailRepository {
           log("🗑 [BIN] Received ${s.docs.length} mails");
           return s.docs.map((d) => MailModel.fromMap(d.data())).toList();
         });
+  }
+
+  Stream<List<MailModel>> getImportant(String email) {
+    return _fire
+        .collection("mails")
+        .where("to", isEqualTo: email)
+        .where("important", isEqualTo: true)
+        .snapshots()
+        .map((s) => s.docs.map((d) => MailModel.fromMap(d.data())).toList());
   }
 }

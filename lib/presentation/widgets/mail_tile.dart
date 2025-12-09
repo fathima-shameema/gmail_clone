@@ -48,7 +48,7 @@ class MailTile extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              displayEmail,
+              isSent ? 'To:$displayEmail' : displayEmail,
               style: const TextStyle(fontWeight: FontWeight.w500),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -92,7 +92,13 @@ class MailTile extends StatelessWidget {
         ],
       ),
       onTap: () {
-        Navigator.of(context).pushNamed('/Mail details', arguments: mail);
+        Navigator.of(context).pushNamed(
+          '/Mail details',
+          arguments: {
+            "mail": mail,
+            "isSent": isSent, 
+          },
+        );
       },
     );
   }

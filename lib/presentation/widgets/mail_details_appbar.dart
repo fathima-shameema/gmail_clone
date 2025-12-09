@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gmail_clone/bloc/auth_bloc/auth_bloc.dart';
 import 'package:gmail_clone/bloc/mail_bloc/mail_bloc.dart';
 import 'package:gmail_clone/data/models/mail.dart';
 import 'package:gmail_clone/presentation/screens/home/mail_details_screen.dart';
@@ -46,16 +47,37 @@ class MailDetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
           itemBuilder:
               (context) => [
                 PopupMenuItem(
-                  child: const Text("Mark as important"),
-                  onTap: () {},
-                ),
-                if (mailData != null)
-                  mailData.isDeleted
-                      ? PopupMenuItem(child: SizedBox.shrink())
-                      : PopupMenuItem(
-                        child: const Text("Add to starred"),
-                        onTap: () {},
+                  child: Row(
+                    children: [
+                      Icon(
+                        mailData!.important
+                            ? Icons.label_important
+                            : Icons.label_important_outline,
+                        size: 20,
                       ),
+                      SizedBox(width: 15),
+                      Text(
+                        mailData.important
+                            ? "Mark as not important"
+                            : "Mark as important",
+                        style: TextStyle(fontSize: 15),
+                      ),
+                    ],
+                  ),
+                  onTap: () {
+                    final newValue = !mailData.important;
+                    final bloc = context.read<MailBloc>();
+                    final auth = context.read<AuthBloc>().state;
+
+                    bloc.add(ToggleImportantEvent(mailData.id, newValue));
+
+                    Future.delayed(Duration(milliseconds: 150), () {
+                      if (bloc.state.filterType == DrawerFilterType.important) {
+                        bloc.add(LoadInboxEvent(auth.activeUser!.email));
+                      }
+                    });
+                  },
+                ),
               ],
           icon: const Icon(Icons.more_vert, size: 23),
         ),

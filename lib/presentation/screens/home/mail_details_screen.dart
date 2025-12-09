@@ -8,8 +8,8 @@ import 'package:intl/intl.dart';
 
 class MailDetailsScreen extends StatefulWidget {
   final MailModel? mail;
-
-  const MailDetailsScreen({super.key, this.mail});
+  final bool isSent;
+  const MailDetailsScreen({super.key, this.mail, required this.isSent});
 
   @override
   State<MailDetailsScreen> createState() => _MailDetailsScreenState();
@@ -43,11 +43,29 @@ class _MailDetailsScreenState extends State<MailDetailsScreen> {
 
     return BlocBuilder<MailBloc, MailState>(
       builder: (context, mailState) {
-        MailModel? currentMail = widget.mail;
-        if (widget.mail != null) {
+        // MailModel? currentMail = widget.mail;
+        // if (widget.mail != null) {
+        //   currentMail = mailState.inbox.firstWhere(
+        //     (m) => m.id == widget.mail!.id,
+        //     orElse: () => widget.mail!,
+        //   );
+        // }
+        MailModel? currentMail;
+
+        final mail = widget.mail;
+
+        if (mail != null) {
           currentMail = mailState.inbox.firstWhere(
-            (m) => m.id == widget.mail!.id,
-            orElse: () => widget.mail!,
+            (m) => m.id == mail.id,
+            orElse:
+                () => mailState.sent.firstWhere(
+                  (m) => m.id == mail.id,
+                  orElse:
+                      () => mailState.bin.firstWhere(
+                        (m) => m.id == mail.id,
+                        orElse: () => mail,
+                      ),
+                ),
           );
         }
 
@@ -76,6 +94,7 @@ class _MailDetailsScreenState extends State<MailDetailsScreen> {
                 grey: grey,
                 mail: widget.mail,
                 systemTheme: systemTheme,
+                isSent: widget.isSent,
               ),
 
               const Divider(height: 1),
@@ -84,9 +103,7 @@ class _MailDetailsScreenState extends State<MailDetailsScreen> {
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 140),
                   child: Text(
-                    currentMail?.body ??
-                        widget.mail?.body ??
-                        "This is sample email content for UI.\n\nReplace with real mail body.",
+                    currentMail?.body ?? widget.mail?.body ?? "",
                     style: const TextStyle(fontSize: 15, height: 1.5),
                   ),
                 ),
@@ -135,6 +152,4 @@ class _MailDetailsScreenState extends State<MailDetailsScreen> {
       },
     );
   }
-
- 
 }

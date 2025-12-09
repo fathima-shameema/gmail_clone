@@ -32,6 +32,8 @@ class MailBloc extends Bloc<MailEvent, MailState> {
 
       emit(state.copyWith(expandedMailInfoIds: current));
     });
+    on<ToggleImportantEvent>(_onToggleImportant);
+    on<LoadImportantEvent>(_onLoadImportant);
   }
 
   Future<void> _onSendMail(SendMailEvent event, Emitter<MailState> emit) async {
@@ -124,6 +126,24 @@ class MailBloc extends Bloc<MailEvent, MailState> {
     await emit.forEach(
       repo.getDeleted(event.email),
       onData: (list) => state.copyWith(bin: list),
+      onError: (error, stackTrace) => state.copyWith(error: error.toString()),
+    );
+  }
+
+  Future<void> _onToggleImportant(
+    ToggleImportantEvent event,
+    Emitter<MailState> emit,
+  ) async {
+    await repo.toggleImportant(event.id, event.value);
+  }
+
+  Future<void> _onLoadImportant(
+    LoadImportantEvent event,
+    Emitter<MailState> emit,
+  ) async {
+    await emit.forEach(
+      repo.getImportant(event.email),
+      onData: (list) => state.copyWith(important: list),
       onError: (error, stackTrace) => state.copyWith(error: error.toString()),
     );
   }
