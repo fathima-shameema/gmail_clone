@@ -1,8 +1,9 @@
+// lib/presentation/widgets/mail_details_header.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gmail_clone/bloc/auth_bloc/auth_bloc.dart';
 import 'package:gmail_clone/bloc/mail_bloc/mail_bloc.dart';
 import 'package:gmail_clone/data/models/mail.dart';
-import 'package:gmail_clone/presentation/widgets/info_row.dart';
 import 'package:intl/intl.dart';
 
 class MailDetailsHeader extends StatelessWidget {
@@ -26,9 +27,8 @@ class MailDetailsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mailData = currentMail ?? mail!;
-    final isExpanded = context.select<MailBloc, bool>(
-      (bloc) => bloc.state.expandedMailInfoIds.contains(mailData.id),
-    );
+    final uid = context.read<AuthBloc>().state.activeUser?.uid ?? '';
+    final isExpanded = context.select<MailBloc, bool>((bloc) => bloc.state.expandedMailInfoIds.contains(mailData.id));
 
     return Column(
       children: [
@@ -44,9 +44,7 @@ class MailDetailsHeader extends StatelessWidget {
                   style: const TextStyle(color: Colors.white, fontSize: 18),
                 ),
               ),
-
               const SizedBox(width: 12),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,47 +55,25 @@ class MailDetailsHeader extends StatelessWidget {
                           child: Text(
                             mailData.from.split('@')[0],
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                           ),
                         ),
-
-                        Text(
-                          formatTime(mailData.timestamp),
-                          style: TextStyle(color: grey, fontSize: 13),
-                        ),
+                        Text(formatTime(mailData.timestamp), style: TextStyle(color: grey, fontSize: 13)),
                       ],
                     ),
-
                     const SizedBox(height: 4),
-
                     GestureDetector(
                       onTap: () {
-                        context.read<MailBloc>().add(
-                          ToggleMailInfoEvent(mailData.id),
-                        );
+                        context.read<MailBloc>().add(ToggleMailInfoEvent(mailData.id));
                       },
                       child: Row(
                         children: [
-                          Text(
-                            isSent
-                                ? 'to ${currentMail!.to.split('@')[0]}'
-                                : "to me",
-                            style: TextStyle(fontSize: 14, color: grey),
-                          ),
-
+                          Text(isSent ? 'to ${mailData.to.split('@')[0]}' : 'to me', style: TextStyle(fontSize: 14, color: grey)),
                           const SizedBox(width: 4),
-
                           AnimatedRotation(
                             turns: isExpanded ? 0.5 : 0,
                             duration: const Duration(milliseconds: 250),
-                            child: Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              size: 20,
-                              color: grey,
-                            ),
+                            child: Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: grey),
                           ),
                         ],
                       ),
@@ -105,27 +81,20 @@ class MailDetailsHeader extends StatelessWidget {
                   ],
                 ),
               ),
-
-              mailData.isDeleted
-                  ? SizedBox.shrink()
+              mailData.isDeleted(uid)
+                  ? const SizedBox.shrink()
                   : IconButton(
-                    icon: Icon(
-                      mailData.starred ? Icons.star : Icons.star_border,
-                      size: 26,
+                      icon: Icon(mailData.isStarred(uid) ? Icons.star : Icons.star_border, size: 26),
+                      onPressed: () {
+                        context.read<MailBloc>().add(ToggleStarEvent(mailData.id, uid, !mailData.isStarred(uid)));
+                      },
                     ),
-                    onPressed: () {
-                      context.read<MailBloc>().add(
-                        ToggleStarEvent(mailData.id, !mailData.starred),
-                      );
-                    },
-                  ),
             ],
           ),
         ),
         AnimatedCrossFade(
           duration: const Duration(milliseconds: 300),
-          crossFadeState:
-              isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+          crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
           firstChild: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Container(
@@ -134,42 +103,31 @@ class MailDetailsHeader extends StatelessWidget {
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                color:
-                    systemTheme == Brightness.dark
-                        ? Colors.grey[900]
-                        : Colors.grey[100],
+                color: systemTheme == Brightness.dark ? Colors.grey[900] : Colors.grey[100],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  InfoRow(
-                    title: "From",
-                    value:
-                        currentMail?.from ??
-                        mail?.from ??
-                        "no-reply@google.com",
-                  ),
+                  _infoRow("From", mailData.from),
                   const SizedBox(height: 6),
-                  InfoRow(
-                    title: "To",
-                    value: currentMail?.to ?? mail?.to ?? "me",
-                  ),
+                  _infoRow("To", mailData.to),
                   const SizedBox(height: 6),
-                  InfoRow(
-                    title: "Date",
-                    value:
-                        (currentMail?.timestamp ?? mail?.timestamp) != null
-                            ? DateFormat('MMM d, y h:mm a').format(
-                              (currentMail?.timestamp ?? mail!.timestamp),
-                            )
-                            : "${DateTime.now().toLocal()}",
-                  ),
+                  _infoRow("Date", DateFormat('MMM d, y h:mm a').format(mailData.timestamp)),
                 ],
               ),
             ),
           ),
           secondChild: const SizedBox.shrink(),
         ),
+      ],
+    );
+  }
+
+  Widget _infoRow(String title, String value) {
+    return Row(
+      children: [
+        SizedBox(width: 80, child: Text("$title:", style: const TextStyle(fontWeight: FontWeight.w600))),
+        Expanded(child: Text(value)),
       ],
     );
   }

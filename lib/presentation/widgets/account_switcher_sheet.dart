@@ -169,7 +169,7 @@ class _AccountSwitcherPanelState extends State<AccountSwitcherPanel>
       onTap: () {
         context.read<AuthBloc>().add(SwitchAccount(user));
         context.read<MailBloc>().add(ResetMailStateEvent()); // ⭐ NEW
-        context.read<MailBloc>().add(LoadInboxEvent(user.email)); // ⭐ NEW
+        context.read<MailBloc>().add(LoadInboxEvent(user.email, user.uid)); // ⭐ NEW
         Navigator.pop(context);
       },
     );

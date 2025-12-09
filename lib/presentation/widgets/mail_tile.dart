@@ -1,5 +1,7 @@
+// lib/presentation/widgets/mail_tile.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gmail_clone/bloc/auth_bloc/auth_bloc.dart';
 import 'package:gmail_clone/bloc/mail_bloc/mail_bloc.dart';
 import 'package:gmail_clone/data/models/mail.dart';
 
@@ -13,6 +15,7 @@ class MailTile extends StatelessWidget {
   final MailModel mail;
   final Function(DateTime) formatTime;
   final String displayName;
+
   const MailTile({
     super.key,
     required this.index,
@@ -28,9 +31,11 @@ class MailTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final uid = context.read<AuthBloc>().state.activeUser?.uid ?? '';
+
     return ListTile(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadiusGeometry.vertical(
+        borderRadius: BorderRadius.vertical(
           top: Radius.circular(index == 0 ? 25 : 0),
           bottom: Radius.circular(index == allMails.length - 1 ? 25 : 0),
         ),
@@ -48,7 +53,7 @@ class MailTile extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              isSent ? 'To:$displayEmail' : displayEmail,
+              isSent ? 'To: $displayEmail' : displayEmail,
               style: const TextStyle(fontWeight: FontWeight.w500),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -76,28 +81,25 @@ class MailTile extends StatelessWidget {
             style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
           const SizedBox(height: 5),
-          mail.isDeleted
-              ? SizedBox.shrink()
+          mail.isDeleted(uid)
+              ? const SizedBox.shrink()
               : GestureDetector(
-                onTap: () {
-                  context.read<MailBloc>().add(
-                    ToggleStarEvent(mail.id, !mail.starred),
-                  );
-                },
-                child: Icon(
-                  mail.starred ? Icons.star : Icons.star_border,
-                  size: 22,
+                  onTap: () {
+                    context.read<MailBloc>().add(
+                          ToggleStarEvent(mail.id, uid, !mail.isStarred(uid)),
+                        );
+                  },
+                  child: Icon(
+                    mail.isStarred(uid) ? Icons.star : Icons.star_border,
+                    size: 22,
+                  ),
                 ),
-              ),
         ],
       ),
       onTap: () {
         Navigator.of(context).pushNamed(
           '/Mail details',
-          arguments: {
-            "mail": mail,
-            "isSent": isSent, 
-          },
+          arguments: {"mail": mail, "isSent": isSent},
         );
       },
     );

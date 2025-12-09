@@ -1,3 +1,4 @@
+// lib/presentation/widgets/inbox_list.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gmail_clone/bloc/auth_bloc/auth_bloc.dart';
@@ -13,15 +14,10 @@ class InboxList extends StatelessWidget {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
 
-    if (difference.inDays == 0) {
-      return DateFormat('h:mm a').format(dateTime);
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return DateFormat('EEEE').format(dateTime);
-    } else {
-      return DateFormat('MMM d').format(dateTime);
-    }
+    if (difference.inDays == 0) return DateFormat('h:mm a').format(dateTime);
+    if (difference.inDays == 1) return 'Yesterday';
+    if (difference.inDays < 7) return DateFormat('EEEE').format(dateTime);
+    return DateFormat('MMM d').format(dateTime);
   }
 
   String _getInitials(String text) {
@@ -35,14 +31,15 @@ class InboxList extends StatelessWidget {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
         final activeUser = authState.activeUser;
-        // final allAccounts = authState.accounts;
-        // final allAccountEmails = allAccounts.map((acc) => acc.email).toSet();
+        final userUid = activeUser?.uid ?? '';
+        final userEmail = activeUser?.email ?? '';
 
         return BlocBuilder<MailBloc, MailState>(
           builder: (context, mailState) {
             List<MailModel> allMails = [];
             bool isBin = false;
             bool isSent = mailState.filterType == DrawerFilterType.sent;
+
             switch (mailState.filterType) {
               case DrawerFilterType.allInboxes:
                 final allMailsMap = <String, MailModel>{};
@@ -52,76 +49,49 @@ class InboxList extends StatelessWidget {
                 allMails = allMailsMap.values.toList();
                 break;
               case DrawerFilterType.primary:
-                if (activeUser != null) {
-                  allMails =
-                      mailState.inbox
-                          .where((mail) => mail.to == activeUser.email)
-                          .toList();
-                }
+                allMails =
+                    mailState.inbox
+                        .where(
+                          (mail) =>
+                              mail.to == userEmail && !mail.isDeleted(userUid),
+                        )
+                        .toList();
                 break;
               case DrawerFilterType.promotions:
               case DrawerFilterType.social:
                 allMails = [];
                 break;
               case DrawerFilterType.starred:
-                if (activeUser != null) {
+                {
                   final map = <String, MailModel>{};
-
-                  for (final mail in mailState.inbox) {
-                    if (mail.starred) map[mail.id] = mail;
+                  for (final m in mailState.inbox) {
+                    if (m.isStarred(userUid)) map[m.id] = m;
                   }
-                  for (final mail in mailState.sent) {
-                    if (mail.starred) map[mail.id] = mail;
+                  for (final m in mailState.sent) {
+                    if (m.isStarred(userUid)) map[m.id] = m;
                   }
-
                   allMails = map.values.toList();
                 }
                 break;
-
               case DrawerFilterType.important:
-                allMails = List<MailModel>.from(mailState.important);
+                allMails = mailState.important;
                 break;
-
               case DrawerFilterType.sent:
-                if (activeUser != null) {
-                  allMails = List<MailModel>.from(mailState.sent);
-                }
+                allMails = mailState.sent;
                 break;
-
               case DrawerFilterType.spam:
                 allMails = [];
                 break;
-
               case DrawerFilterType.bin:
-                if (activeUser != null) {
-                  allMails = List<MailModel>.from(mailState.bin);
-                  isBin = true;
-                }
+                allMails = mailState.bin;
+                isBin = true;
                 break;
             }
 
             allMails.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
             if (allMails.isEmpty) {
-              return Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.inbox_outlined,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        "No emails",
-                        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                ),
-              );
+              return const Expanded(child: Center(child: Text("No emails")));
             }
 
             return InboxData(

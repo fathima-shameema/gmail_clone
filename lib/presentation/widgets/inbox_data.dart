@@ -1,8 +1,8 @@
+// lib/presentation/widgets/inbox_data.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gmail_clone/bloc/mail_bloc/mail_bloc.dart';
 import 'package:gmail_clone/data/models/mail.dart';
-import 'package:gmail_clone/data/models/user_account.dart';
 import 'package:gmail_clone/presentation/widgets/mail_tile.dart';
 
 class InboxData extends StatelessWidget {
@@ -12,98 +12,57 @@ class InboxData extends StatelessWidget {
   final Brightness systemTheme;
   final Function(String) getInitials;
   final Function(DateTime) formatTime;
-  final AppUser? activeUser;
+  final dynamic activeUser; // AppUser
+
   const InboxData({
     super.key,
     required this.isBin,
+    required this.isSent,
     required this.allMails,
     required this.systemTheme,
     required this.getInitials,
     required this.formatTime,
     required this.activeUser,
-    required this.isSent,
   });
 
   @override
   Widget build(BuildContext context) {
+    final uid = activeUser?.uid ?? '';
+
     return Expanded(
       child: Column(
         children: [
-          isBin
-              ? Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20.0,
-                  vertical: 15,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.delete_outline,
-                          size: 30,
-                          color: Colors.lightBlueAccent,
-                        ),
-                        SizedBox(width: 20),
-                        Expanded(
-                          child: Text(
-                            'Items that have been in bin for more than 30 days will be automatically deleted.',
-                            maxLines: 2,
-                            softWrap: true,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 14),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 20),
-                    GestureDetector(
-                      onTap: () {
-                        showDialog(
-                          context: context,
-                          builder:
-                              (ctx) => AlertDialog(
-                                title: Text('Empty Bin?'),
-                                content: Text(
-                                  '${allMails.length} conversations will be permanently deleted.',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.of(context).pop();
-                                    },
-                                    child: Text('Cancel'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      if (activeUser != null) {
-                                        context.read<MailBloc>().add(
-                                          EmptyBinEvent(activeUser!.email),
-                                        );
-                                      }
-                                      Navigator.of(context).pop();
-                                    },
-                                    child: Text('Empty'),
-                                  ),
-                                ],
-                              ),
-                        );
-                      },
-                      child: Text(
-                        'Empty Bin now',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.lightBlueAccent,
+          if (isBin)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.delete_outline, size: 30, color: Colors.lightBlueAccent),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Text(
+                          'Items that have been in bin for more than 30 days will be automatically deleted.',
+                          maxLines: 2,
+                          softWrap: true,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 14),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              )
-              : const SizedBox.shrink(),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  GestureDetector(
+                    onTap: () {
+                      context.read<MailBloc>().add(EmptyBinEvent(uid));
+                    },
+                    child: Text('Empty Bin now', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.lightBlueAccent)),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 60),
@@ -111,16 +70,13 @@ class InboxData extends StatelessWidget {
               separatorBuilder: (c, i) => const SizedBox(height: 5),
               itemBuilder: (context, index) {
                 final mail = allMails[index];
-
-                final isSent =
-                    activeUser != null && mail.from == activeUser!.email;
-                final displayName = isSent ? mail.to : mail.from;
+                final sentFlag = activeUser != null && mail.from == (activeUser?.email ?? '');
+                final displayName = sentFlag ? mail.to : mail.from;
                 final displayEmail = displayName;
-
                 return MailTile(
                   index: index,
                   systemTheme: systemTheme,
-                  isSent: isSent,
+                  isSent: sentFlag,
                   getInitials: getInitials,
                   displayEmail: displayEmail,
                   mail: mail,

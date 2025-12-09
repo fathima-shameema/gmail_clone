@@ -108,10 +108,10 @@ class _ComposeScreenState extends State<ComposeScreen>
       return;
     }
 
-    final userUid = authState.activeUser?.uid ?? "";
+    // When dispatching SendMailEvent:
+    final userUid = authState.activeUser?.uid ?? '';
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final mailId =
-        userUid.isNotEmpty ? "${userUid}_$timestamp" : "mail_$timestamp";
+    final mailId = "${userUid}_$timestamp";
 
     final mail = MailModel(
       id: mailId,
@@ -121,18 +121,17 @@ class _ComposeScreenState extends State<ComposeScreen>
       subject: subject,
       body: body,
       timestamp: DateTime.now(),
-      isSent: true,
+      userStatus: {}, // repo will set proper userStatus
+      userIds: [], // repo will set userIds
     );
 
-    sendingSnack = ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Sending…"),
-      ),
-    );
+    context.read<MailBloc>().add(SendMailEvent(mail, userUid));
+
+    sendingSnack = ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text("Sending…")));
 
     setState(() => isSending = true);
-
-    context.read<MailBloc>().add(SendMailEvent(mail));
   }
 
   @override

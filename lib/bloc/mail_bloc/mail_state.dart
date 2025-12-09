@@ -1,3 +1,4 @@
+// lib/bloc/mail_state.dart
 part of 'mail_bloc.dart';
 
 enum DrawerFilterType {
@@ -9,49 +10,53 @@ enum DrawerFilterType {
   important,
   sent,
   spam,
-  bin,
+  bin
 }
 
 class MailState {
   final List<MailModel> inbox;
   final List<MailModel> sent;
+  final List<MailModel> bin;
+  final List<MailModel> important;
+  final DrawerFilterType filterType;
   final bool loading;
   final String? error;
-  final DrawerFilterType filterType;
-  final List<MailModel> bin;
   final Set<String> expandedMailInfoIds;
-  final List<MailModel> important;
 
   MailState({
-    this.inbox = const [],
-    this.sent = const [],
+    List<MailModel>? inbox,
+    List<MailModel>? sent,
+    List<MailModel>? bin,
+    List<MailModel>? important,
+    this.filterType = DrawerFilterType.primary,
     this.loading = false,
     this.error,
-    this.filterType = DrawerFilterType.primary,
-    this.bin = const [],
-    this.expandedMailInfoIds = const {},
-    this.important = const [],
-  });
+    Set<String>? expandedMailInfoIds,
+  })  : inbox = inbox ?? [],
+        sent = sent ?? [],
+        bin = bin ?? [],
+        important = important ?? [],
+        expandedMailInfoIds = expandedMailInfoIds ?? {};
 
   MailState copyWith({
     List<MailModel>? inbox,
     List<MailModel>? sent,
+    List<MailModel>? bin,
+    List<MailModel>? important,
+    DrawerFilterType? filterType,
     bool? loading,
     String? error,
-    DrawerFilterType? filterType,
-    List<MailModel>? bin,
     Set<String>? expandedMailInfoIds,
-    List<MailModel>? important,
   }) {
     return MailState(
       inbox: inbox ?? this.inbox,
       sent: sent ?? this.sent,
+      bin: bin ?? this.bin,
+      important: important ?? this.important,
+      filterType: filterType ?? this.filterType,
       loading: loading ?? this.loading,
       error: error,
-      filterType: filterType ?? this.filterType,
-      bin: bin ?? this.bin,
       expandedMailInfoIds: expandedMailInfoIds ?? this.expandedMailInfoIds,
-      important: important ?? this.important,
     );
   }
 }

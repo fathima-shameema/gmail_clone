@@ -1,195 +1,199 @@
+// lib/data/repository/mail_repository.dart
 import 'dart:developer';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:gmail_clone/data/models/mail.dart';
 
 class MailRepository {
   final _fire = FirebaseFirestore.instance;
+  final usersColl = FirebaseFirestore.instance.collection('users');
 
-  Future<void> sendMail(MailModel mail) async {
-    log("📨 [SEND] Sending mail: ${mail.toMap()}");
+  // Helper: try find user uid by email in your users collection
+  Future<String?> _uidForEmail(String email) async {
     try {
-      final mailData = mail.toMap();
-
-      if (mailData["from"] == null || mailData["from"].toString().isEmpty) {
-        throw Exception("Mail 'from' field is missing or empty");
-      }
-
-      log(
-        "📨 [SEND] From: ${mailData["from"]}, To: ${mailData["to"]}, Subject: ${mailData["subject"]}",
-      );
-
-      await _fire
-          .collection("mails")
-          .doc(mail.id)
-          .set(mailData, SetOptions(merge: false));
-
-      log("✅ [SEND] Mail stored successfully with ID: ${mail.id}");
-      log("✅ [SEND] Mail stored successfully.");
+      final snap =
+          await usersColl.where('email', isEqualTo: email).limit(1).get();
+      if (snap.docs.isEmpty) return null;
+      return snap.docs.first.id; // assuming docId == uid
     } catch (e) {
-      log("❌ [SEND][ERROR] Failed to send mail: $e");
-      log("❌ [SEND][ERROR] Failed to send mail: $e");
-      rethrow;
+      log('[repo] uid lookup error: $e');
+      return null;
     }
   }
 
-  Stream<List<MailModel>> getInbox(String userEmail) {
-    log("📥 [INBOX] Listening for inbox mails of: $userEmail");
+  Future<void> sendMail(MailModel mail, String senderUid) async {
+    final receiverUid = await _uidForEmail(mail.to);
+
+    final Map<String, dynamic> userStatus = {};
+
+    // Always add sender
+    userStatus[senderUid] = {
+      "starred": false,
+      "important": false,
+      "deleted": false,
+    };
+
+    // If receiver UID exists (registered user)
+    if (receiverUid != null) {
+      userStatus[receiverUid] = {
+        "starred": false,
+        "important": false,
+        "deleted": false,
+      };
+    } else {
+      // Receiver not registered — create a fallback entry
+      userStatus[mail.to] = {
+        "starred": false,
+        "important": false,
+        "deleted": false,
+      };
+    }
+
+    await _fire.collection("mails").doc(mail.id).set({
+      ...mail.toMap(),
+      "userStatus": userStatus,
+      "userIds": userStatus.keys.toList(),
+    });
+  }
+
+  Stream<List<MailModel>> getInbox(String email, String uid) {
     return _fire
         .collection("mails")
-        .where("to", isEqualTo: userEmail)
-        .where("isDeleted", isEqualTo: false)
+        .where("to", isEqualTo: email)
         .snapshots()
-        .map((s) {
-          log("📥 [INBOX] Received ${s.docs.length} mails");
-          return s.docs.map((d) => MailModel.fromMap(d.data())).toList();
+        .map((snap) {
+          return snap.docs
+              .map((d) => MailModel.fromMap(d.data()))
+              .where((m) => !m.isDeleted(uid))
+              .toList();
         });
   }
 
-  Stream<List<MailModel>> getSent(String email) {
+  Stream<List<MailModel>> getSent(String email, String uid) {
     return _fire
         .collection("mails")
         .where("from", isEqualTo: email)
-        .where("isDeleted", isEqualTo: false)
         .snapshots()
-        .map((s) => s.docs.map((d) => MailModel.fromMap(d.data())).toList());
+        .map((snap) {
+          return snap.docs
+              .map((d) => MailModel.fromMap(d.data()))
+              .where((m) => !m.isDeleted(uid) || m.userStatus[uid] == null)
+              .toList();
+        });
   }
 
-  Stream<List<MailModel>> getAllInboxes(List<String> userEmails) {
-    log("📥 [ALL INBOXES] Listening for inbox mails of: $userEmails");
-    if (userEmails.isEmpty) {
-      return Stream.value([]);
-    }
-
-    if (userEmails.length <= 10) {
-      return _fire
-          .collection("mails")
-          .where("to", whereIn: userEmails)
-          .where("isDeleted", isEqualTo: false)
-          .snapshots()
-          .map((s) {
-            log("📥 [ALL INBOXES] Received ${s.docs.length} mails");
-            return s.docs.map((d) => MailModel.fromMap(d.data())).toList();
-          });
-    } else {
-      final limitedEmails = userEmails.take(10).toList();
-      return _fire
-          .collection("mails")
-          .where("to", whereIn: limitedEmails)
-          .where("isDeleted", isEqualTo: false)
-          .snapshots()
-          .map((s) {
-            log(
-              "📥 [ALL INBOXES] Received ${s.docs.length} mails (limited to 10 accounts)",
-            );
-            return s.docs.map((d) => MailModel.fromMap(d.data())).toList();
-          });
-    }
-  }
-
-  Stream<List<MailModel>> getAllSent(List<String> userEmails) {
-    log("📤 [ALL SENT] Listening for sent mails of: $userEmails");
-    if (userEmails.isEmpty) {
-      return Stream.value([]);
-    }
-
-    if (userEmails.length <= 10) {
-      return _fire
-          .collection("mails")
-          .where("from", whereIn: userEmails)
-          .snapshots()
-          .map((s) {
-            log("📤 [ALL SENT] Received ${s.docs.length} mails");
-            return s.docs.map((d) => MailModel.fromMap(d.data())).toList();
-          });
-    } else {
-      final limitedEmails = userEmails.take(10).toList();
-      return _fire
-          .collection("mails")
-          .where("from", whereIn: limitedEmails)
-          .snapshots()
-          .map((s) {
-            log(
-              "📤 [ALL SENT] Received ${s.docs.length} mails (limited to 10 accounts)",
-            );
-            return s.docs.map((d) => MailModel.fromMap(d.data())).toList();
-          });
-    }
-  }
-
-  Future<void> toggleStar(String id, bool value) async {
-    log("⭐ [STAR] Mail $id → $value");
-    try {
-      await _fire.collection("mails").doc(id).update({"starred": value});
-    } catch (e) {
-      log("❌ [STAR][ERROR] $e");
-    }
-  }
-
-  Future<void> toggleImportant(String id, bool value) async {
-    log("❗ [IMPORTANT] Mail $id → $value");
-    try {
-      await _fire.collection("mails").doc(id).update({"important": value});
-    } catch (e) {
-      log("❌ [IMPORTANT][ERROR] $e");
-      rethrow;
-    }
-  }
-
-  Future<void> deleteMail(String id) async {
-    log("🗑 [DELETE] Marking mail $id as deleted");
-    try {
-      await _fire.collection("mails").doc(id).update({"isDeleted": true});
-    } catch (e) {
-      log("❌ [DELETE][ERROR] $e");
-    }
-  }
-
-  Stream<List<MailModel>> getDeleted(String email) {
+  Stream<List<MailModel>> getAllInboxes(List<String> emails, String uid) {
+    if (emails.isEmpty) return Stream.value([]);
+    final limited = emails.length <= 10 ? emails : emails.take(10).toList();
     return _fire
         .collection("mails")
-        .where("userIds", arrayContains: email)
-        .where("isDeleted", isEqualTo: true)
+        .where("to", whereIn: limited)
         .snapshots()
-        .map((s) => s.docs.map((d) => MailModel.fromMap(d.data())).toList());
+        .map((snap) {
+          return snap.docs
+              .map((d) => MailModel.fromMap(d.data()))
+              .where((m) => !m.isDeleted(uid))
+              .toList();
+        });
   }
 
-  Stream<List<MailModel>> getImportant(String email) {
+  Stream<List<MailModel>> getAllSent(List<String> emails, String uid) {
+    if (emails.isEmpty) return Stream.value([]);
+    final limited = emails.length <= 10 ? emails : emails.take(10).toList();
     return _fire
         .collection("mails")
-        .where("userIds", arrayContains: email)
-        .where("important", isEqualTo: true)
+        .where("from", whereIn: limited)
         .snapshots()
-        .map((s) => s.docs.map((d) => MailModel.fromMap(d.data())).toList());
+        .map((snap) {
+          return snap.docs
+              .map((d) => MailModel.fromMap(d.data()))
+              .where((m) => !m.isDeleted(uid) || m.userStatus[uid] == null)
+              .toList();
+        });
   }
 
-  Future<void> emptyBin(String email) async {
-    final deleted =
-        await _fire
-            .collection("mails")
-            .where("userIds", arrayContains: email)
-            .where("isDeleted", isEqualTo: true)
-            .get();
+  Future<void> toggleStar(String mailId, String uid, bool value) async {
+    await _fire.collection("mails").doc(mailId).update({
+      "userStatus.$uid.starred": value,
+    });
+  }
 
-    for (var d in deleted.docs) {
-      await d.reference.delete();
+  Future<void> toggleImportant(String mailId, String uid, bool value) async {
+    await _fire.collection("mails").doc(mailId).update({
+      "userStatus.$uid.important": value,
+    });
+  }
+
+  Future<void> deleteMail(String mailId, String uid) async {
+    await _fire.collection("mails").doc(mailId).update({
+      "userStatus.$uid.deleted": true,
+    });
+  }
+
+  Stream<List<MailModel>> getBin(String uid) {
+    return _fire.collection("mails").snapshots().map((snap) {
+      return snap.docs
+          .map((d) => MailModel.fromMap(d.data()))
+          .where((m) => m.isDeleted(uid))
+          .toList();
+    });
+  }
+
+  Stream<List<MailModel>> getImportant(String uid) {
+    return _fire.collection("mails").snapshots().map((snap) {
+      return snap.docs
+          .map((d) => MailModel.fromMap(d.data()))
+          .where((m) => m.isImportant(uid))
+          .toList();
+    });
+  }
+
+  Future<void> emptyBin(String uid) async {
+    // Delete documents where userStatus[uid].deleted == true and either:
+    // - only uid present in userIds -> delete doc, or
+    // - more users present -> remove the uid from userStatus and userIds
+    final snap = await _fire.collection("mails").get();
+    for (var doc in snap.docs) {
+      final data = doc.data();
+      final MailModel m = MailModel.fromMap(data);
+      if (m.isDeleted(uid)) {
+        final docRef = doc.reference;
+        final otherUserIds = List<String>.from(
+          m.userIds.where((u) => u != uid),
+        );
+        if (otherUserIds.isEmpty) {
+          await docRef.delete();
+        } else {
+          // remove uid fields from doc
+          final updates = {
+            "userStatus.$uid": FieldValue.delete(),
+            "userIds": otherUserIds,
+          };
+          await docRef.update(updates);
+        }
+      }
     }
   }
 
-  Future<void> autoCleanBin(String userEmail) async {
+  Future<void> autoCleanBin(String uid) async {
     final threshold = DateTime.now().subtract(const Duration(days: 30));
-
-    final snapshot =
-        await _fire
-            .collection("mails")
-            .where("to", isEqualTo: userEmail)
-            .where("isDeleted", isEqualTo: true)
-            .get();
-
-    for (var doc in snapshot.docs) {
-      final mail = MailModel.fromMap(doc.data());
-      if (mail.timestamp.isBefore(threshold)) {
-        await doc.reference.delete();
+    final snap = await _fire.collection("mails").get();
+    for (var doc in snap.docs) {
+      final m = MailModel.fromMap(doc.data());
+      if (m.isDeleted(uid)) {
+        if (m.timestamp.isBefore(threshold)) {
+          // if only this user remains, delete doc; otherwise remove user entry
+          final otherUserIds = List<String>.from(
+            m.userIds.where((u) => u != uid),
+          );
+          if (otherUserIds.isEmpty) {
+            await doc.reference.delete();
+          } else {
+            await doc.reference.update({
+              "userStatus.$uid": FieldValue.delete(),
+              "userIds": otherUserIds,
+            });
+          }
+        }
       }
     }
   }

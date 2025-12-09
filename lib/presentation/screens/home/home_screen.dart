@@ -28,7 +28,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
         mailBloc.add(ResetMailStateEvent());
         mailBloc.add(SetDrawerFilterEvent(DrawerFilterType.primary));
-        mailBloc.add(LoadInboxEvent(authState.activeUser!.email));
+        mailBloc.add(
+          LoadInboxEvent(
+            authState.activeUser!.email,
+            authState.activeUser!.uid,
+          ),
+        );
       }
     });
   }
@@ -62,55 +67,48 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // lib/presentation/screens/home/home_screen.dart
+  // ... (keep imports)
   void _handleDrawerSelection(DrawerFilterType filterType) {
     final mailBloc = context.read<MailBloc>();
     final authState = context.read<AuthBloc>().state;
     final activeUser = authState.activeUser;
+    final uid = activeUser?.uid ?? '';
+    final email = activeUser?.email ?? '';
 
     mailBloc.add(SetDrawerFilterEvent(filterType));
-    if (activeUser != null) {
-      switch (filterType) {
-        case DrawerFilterType.primary:
-          mailBloc.add(LoadInboxEvent(activeUser.email));
-          break;
 
-        case DrawerFilterType.allInboxes:
-          final emails = authState.accounts.map((e) => e.email).toList();
-          mailBloc.add(LoadAllInboxesEvent(emails));
-          break;
+    if (uid.isEmpty) return;
 
-        case DrawerFilterType.starred:
-          final activeUser = authState.activeUser;
-          if (activeUser != null) {
-            mailBloc.add(LoadInboxEvent(activeUser.email));
-            mailBloc.add(LoadSentEvent(activeUser.email));
-          }
-          break;
-
-        case DrawerFilterType.important:
-          mailBloc.add(LoadImportantEvent(activeUser.email));
-          break;
-
-        case DrawerFilterType.sent:
-          final activeUser = authState.activeUser;
-          if (activeUser != null) {
-            mailBloc.add(LoadSentEvent(activeUser.email));
-          }
-          break;
-
-        case DrawerFilterType.spam:
-          mailBloc.add(LoadInboxEvent(activeUser.email));
-          break;
-
-        case DrawerFilterType.bin:
-          mailBloc.add(AutoCleanBinEvent(activeUser.email));
-          mailBloc.add(LoadBinEvent(activeUser.email));
-          break;
-
-        case DrawerFilterType.promotions:
-        case DrawerFilterType.social:
-          break;
-      }
+    switch (filterType) {
+      case DrawerFilterType.primary:
+        mailBloc.add(LoadInboxEvent(email, uid));
+        break;
+      case DrawerFilterType.allInboxes:
+        final emails = authState.accounts.map((e) => e.email).toList();
+        mailBloc.add(LoadAllInboxesEvent(emails, uid));
+        break;
+      case DrawerFilterType.starred:
+        // load inbox + sent; InboxList will combine by checking isStarred(uid)
+        mailBloc.add(LoadInboxEvent(email, uid));
+        mailBloc.add(LoadSentEvent(email, uid));
+        break;
+      case DrawerFilterType.important:
+        mailBloc.add(LoadImportantEvent(uid));
+        break;
+      case DrawerFilterType.sent:
+        mailBloc.add(LoadSentEvent(email, uid));
+        break;
+      case DrawerFilterType.spam:
+        mailBloc.add(LoadInboxEvent(email, uid));
+        break;
+      case DrawerFilterType.bin:
+        mailBloc.add(AutoCleanBinEvent(uid));
+        mailBloc.add(LoadBinEvent(uid));
+        break;
+      case DrawerFilterType.promotions:
+      case DrawerFilterType.social:
+        break;
     }
   }
 
