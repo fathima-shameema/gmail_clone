@@ -1,0 +1,4 @@
+flutter_native_splash:
+  image: assets/icons/gmail_5968534.png 
+  color: "#ffffff"    
+  color_dark: "#000000"
