@@ -61,8 +61,19 @@ class ToggleImportantEvent extends MailEvent {
 
   ToggleImportantEvent(this.id, this.value);
 }
+
 class LoadImportantEvent extends MailEvent {
   final String email;
   LoadImportantEvent(this.email);
 }
 
+class EmptyBinEvent extends MailEvent {
+  final String email;
+  EmptyBinEvent(this.email);
+}
+
+
+class AutoCleanBinEvent extends MailEvent {
+  final String email;
+  AutoCleanBinEvent(this.email);
+}

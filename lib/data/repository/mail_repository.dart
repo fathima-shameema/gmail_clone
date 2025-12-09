@@ -46,16 +46,13 @@ class MailRepository {
         });
   }
 
-  Stream<List<MailModel>> getSent(String userEmail) {
-    log("📤 [SENT] Listening for sent mails of: $userEmail");
+  Stream<List<MailModel>> getSent(String email) {
     return _fire
         .collection("mails")
-        .where("from", isEqualTo: userEmail)
+        .where("from", isEqualTo: email)
+        .where("isDeleted", isEqualTo: false)
         .snapshots()
-        .map((s) {
-          log("📤 [SENT] Received ${s.docs.length} mails");
-          return s.docs.map((d) => MailModel.fromMap(d.data())).toList();
-        });
+        .map((s) => s.docs.map((d) => MailModel.fromMap(d.data())).toList());
   }
 
   Stream<List<MailModel>> getAllInboxes(List<String> userEmails) {
@@ -148,25 +145,52 @@ class MailRepository {
     }
   }
 
-  Stream<List<MailModel>> getDeleted(String userEmail) {
-    log("🗑 [BIN] Listening for deleted mails of: $userEmail");
+  Stream<List<MailModel>> getDeleted(String email) {
     return _fire
         .collection("mails")
-        .where("to", isEqualTo: userEmail)
+        .where("userIds", arrayContains: email)
         .where("isDeleted", isEqualTo: true)
         .snapshots()
-        .map((s) {
-          log("🗑 [BIN] Received ${s.docs.length} mails");
-          return s.docs.map((d) => MailModel.fromMap(d.data())).toList();
-        });
+        .map((s) => s.docs.map((d) => MailModel.fromMap(d.data())).toList());
   }
 
   Stream<List<MailModel>> getImportant(String email) {
     return _fire
         .collection("mails")
-        .where("to", isEqualTo: email)
+        .where("userIds", arrayContains: email)
         .where("important", isEqualTo: true)
         .snapshots()
         .map((s) => s.docs.map((d) => MailModel.fromMap(d.data())).toList());
+  }
+
+  Future<void> emptyBin(String email) async {
+    final deleted =
+        await _fire
+            .collection("mails")
+            .where("userIds", arrayContains: email)
+            .where("isDeleted", isEqualTo: true)
+            .get();
+
+    for (var d in deleted.docs) {
+      await d.reference.delete();
+    }
+  }
+
+  Future<void> autoCleanBin(String userEmail) async {
+    final threshold = DateTime.now().subtract(const Duration(days: 30));
+
+    final snapshot =
+        await _fire
+            .collection("mails")
+            .where("to", isEqualTo: userEmail)
+            .where("isDeleted", isEqualTo: true)
+            .get();
+
+    for (var doc in snapshot.docs) {
+      final mail = MailModel.fromMap(doc.data());
+      if (mail.timestamp.isBefore(threshold)) {
+        await doc.reference.delete();
+      }
+    }
   }
 }

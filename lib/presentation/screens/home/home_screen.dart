@@ -83,6 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
           final activeUser = authState.activeUser;
           if (activeUser != null) {
             mailBloc.add(LoadInboxEvent(activeUser.email));
+            mailBloc.add(LoadSentEvent(activeUser.email));
           }
           break;
 
@@ -102,6 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
           break;
 
         case DrawerFilterType.bin:
+          mailBloc.add(AutoCleanBinEvent(activeUser.email));
           mailBloc.add(LoadBinEvent(activeUser.email));
           break;
 

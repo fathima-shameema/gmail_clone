@@ -34,6 +34,8 @@ class MailBloc extends Bloc<MailEvent, MailState> {
     });
     on<ToggleImportantEvent>(_onToggleImportant);
     on<LoadImportantEvent>(_onLoadImportant);
+    on<EmptyBinEvent>(_onEmptyBin);
+    on<AutoCleanBinEvent>(_onAutoCleanBin);
   }
 
   Future<void> _onSendMail(SendMailEvent event, Emitter<MailState> emit) async {
@@ -146,5 +148,22 @@ class MailBloc extends Bloc<MailEvent, MailState> {
       onData: (list) => state.copyWith(important: list),
       onError: (error, stackTrace) => state.copyWith(error: error.toString()),
     );
+  }
+
+  Future<void> _onEmptyBin(EmptyBinEvent event, Emitter<MailState> emit) async {
+    await repo.emptyBin(event.email);
+
+    // Refresh bin immediately after deleting
+    add(LoadBinEvent(event.email));
+  }
+
+  Future<void> _onAutoCleanBin(
+    AutoCleanBinEvent event,
+    Emitter<MailState> emit,
+  ) async {
+    await repo.autoCleanBin(event.email);
+
+    // Refresh again
+    add(LoadBinEvent(event.email));
   }
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gmail_clone/bloc/mail_bloc/mail_bloc.dart';
 import 'package:gmail_clone/data/models/mail.dart';
 import 'package:gmail_clone/data/models/user_account.dart';
 import 'package:gmail_clone/presentation/widgets/mail_tile.dart';
@@ -18,7 +20,8 @@ class InboxData extends StatelessWidget {
     required this.systemTheme,
     required this.getInitials,
     required this.formatTime,
-    required this.activeUser, required this.isSent,
+    required this.activeUser,
+    required this.isSent,
   });
 
   @override
@@ -57,7 +60,37 @@ class InboxData extends StatelessWidget {
                     ),
                     SizedBox(height: 20),
                     GestureDetector(
-                      onTap: () {},
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder:
+                              (ctx) => AlertDialog(
+                                title: Text('Empty Bin?'),
+                                content: Text(
+                                  '${allMails.length} conversations will be permanently deleted.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    child: Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      if (activeUser != null) {
+                                        context.read<MailBloc>().add(
+                                          EmptyBinEvent(activeUser!.email),
+                                        );
+                                      }
+                                      Navigator.of(context).pop();
+                                    },
+                                    child: Text('Empty'),
+                                  ),
+                                ],
+                              ),
+                        );
+                      },
                       child: Text(
                         'Empty Bin now',
                         style: TextStyle(

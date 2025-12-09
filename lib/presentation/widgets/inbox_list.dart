@@ -65,16 +65,19 @@ class InboxList extends StatelessWidget {
                 break;
               case DrawerFilterType.starred:
                 if (activeUser != null) {
-                  allMails =
-                      mailState.inbox
-                          .where(
-                            (mail) =>
-                                mail.to == activeUser.email &&
-                                mail.starred == true,
-                          )
-                          .toList();
+                  final map = <String, MailModel>{};
+
+                  for (final mail in mailState.inbox) {
+                    if (mail.starred) map[mail.id] = mail;
+                  }
+                  for (final mail in mailState.sent) {
+                    if (mail.starred) map[mail.id] = mail;
+                  }
+
+                  allMails = map.values.toList();
                 }
                 break;
+
               case DrawerFilterType.important:
                 allMails = List<MailModel>.from(mailState.important);
                 break;

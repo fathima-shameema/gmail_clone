@@ -4,7 +4,7 @@ import 'package:gmail_clone/resources/colors/colors.dart';
 class AppAlertDialogueTheme {
   AppAlertDialogueTheme._();
   static DialogThemeData lightAlertDialogue = DialogThemeData(
-    backgroundColor: AppColors.textWhite,
+    backgroundColor: AppColors.liightGrey,
     titleTextStyle: TextStyle(
       color: AppColors.textBlack,
       fontSize: 23,
@@ -16,7 +16,7 @@ class AppAlertDialogueTheme {
     ),
   );
   static DialogThemeData darkAlertDialogue = DialogThemeData(
-    backgroundColor: AppColors.textBlack,
+    backgroundColor: AppColors.darkgGey,
     titleTextStyle: TextStyle(
       color: AppColors.textWhite,
       fontSize: 18,

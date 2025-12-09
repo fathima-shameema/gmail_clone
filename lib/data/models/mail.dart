@@ -40,6 +40,7 @@ class MailModel {
     "category": category,
     "isSent": isSent,
     "isDeleted": isDeleted,
+    "userIds": [from, to],
   };
 
   factory MailModel.fromMap(Map<String, dynamic> map) {
