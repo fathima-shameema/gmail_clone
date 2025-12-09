@@ -66,7 +66,50 @@ class MailModel {
   bool isStarred(String uid) => userStatus[uid]?["starred"] ?? false;
   bool isImportant(String uid) => userStatus[uid]?["important"] ?? false;
 
-  // convenience getters for older code (if you used .starred in UI)
   bool starred(String uid) => isStarred(uid);
   bool important(String uid) => isImportant(uid);
+
+  bool isDeletedFor(String uid, String email) {
+    final uidEntry = userStatus[uid];
+    if (uidEntry != null && uidEntry is Map && uidEntry['deleted'] != null) {
+      return uidEntry['deleted'] as bool;
+    }
+
+    final emailEntry = userStatus[email];
+    if (emailEntry != null &&
+        emailEntry is Map &&
+        emailEntry['deleted'] != null) {
+      return emailEntry['deleted'] as bool;
+    }
+
+    return false;
+  }
+
+  bool isStarredFor(String uid, String email) {
+    final uidEntry = userStatus[uid];
+    if (uidEntry != null && uidEntry is Map && uidEntry['starred'] != null) {
+      return uidEntry['starred'] as bool;
+    }
+    final emailEntry = userStatus[email];
+    if (emailEntry != null &&
+        emailEntry is Map &&
+        emailEntry['starred'] != null) {
+      return emailEntry['starred'] as bool;
+    }
+    return false;
+  }
+
+  bool isImportantFor(String uid, String email) {
+    final uidEntry = userStatus[uid];
+    if (uidEntry != null && uidEntry is Map && uidEntry['important'] != null) {
+      return uidEntry['important'] as bool;
+    }
+    final emailEntry = userStatus[email];
+    if (emailEntry != null &&
+        emailEntry is Map &&
+        emailEntry['important'] != null) {
+      return emailEntry['important'] as bool;
+    }
+    return false;
+  }
 }

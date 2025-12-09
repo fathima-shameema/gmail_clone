@@ -1,12 +1,11 @@
 import 'package:bloc/bloc.dart';
-import 'package:meta/meta.dart';
 
 part 'compose_event.dart';
 part 'compose_state.dart';
 
 class ComposeBloc extends Bloc<ComposeEvent, ComposeState> {
   ComposeBloc({required String initialFrom})
-      : super(ComposeState.initial(initialFrom)) {
+    : super(ComposeState.initial(initialFrom)) {
     on<ToggleExpandFromEvent>((e, emit) {
       emit(state.copyWith(expandFrom: !state.expandFrom));
     });

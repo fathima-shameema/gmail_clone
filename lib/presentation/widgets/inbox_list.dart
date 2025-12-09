@@ -63,9 +63,7 @@ class InboxList extends StatelessWidget {
             }
 
             if (isLoading) {
-              return const Expanded(
-                child: Center(child: CustomLoader()),
-              );
+              return const Expanded(child: Center(child: CustomLoader()));
             }
 
             List<MailModel> allMails = [];
@@ -82,12 +80,14 @@ class InboxList extends StatelessWidget {
                 break;
               case DrawerFilterType.primary:
                 allMails =
-                    mailState.inbox
-                        .where(
-                          (mail) =>
-                              mail.to == userEmail && !mail.isDeleted(userUid),
-                        )
-                        .toList();
+                    mailState.inbox.where((mail) {
+                      final isParticipant =
+                          mail.userIds.contains(userUid) ||
+                          mail.userIds.contains(userEmail);
+                      final notSender = mail.from != userEmail;
+                      final notDeleted = !mail.isDeletedFor(userUid, userEmail);
+                      return isParticipant && notSender && notDeleted;
+                    }).toList();
                 break;
               case DrawerFilterType.promotions:
               case DrawerFilterType.social:
@@ -97,10 +97,10 @@ class InboxList extends StatelessWidget {
                 {
                   final map = <String, MailModel>{};
                   for (final m in mailState.inbox) {
-                    if (m.isStarred(userUid)) map[m.id] = m;
+                    if (m.isStarredFor(userUid, userEmail)) map[m.id] = m;
                   }
                   for (final m in mailState.sent) {
-                    if (m.isStarred(userUid)) map[m.id] = m;
+                    if (m.isStarredFor(userUid, userEmail)) map[m.id] = m;
                   }
                   allMails = map.values.toList();
                 }

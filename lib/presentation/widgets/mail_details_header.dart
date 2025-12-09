@@ -28,7 +28,9 @@ class MailDetailsHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final mailData = currentMail ?? mail!;
     final uid = context.read<AuthBloc>().state.activeUser?.uid ?? '';
-    final isExpanded = context.select<MailBloc, bool>((bloc) => bloc.state.expandedMailInfoIds.contains(mailData.id));
+    final isExpanded = context.select<MailBloc, bool>(
+      (bloc) => bloc.state.expandedMailInfoIds.contains(mailData.id),
+    );
 
     return Column(
       children: [
@@ -55,25 +57,42 @@ class MailDetailsHeader extends StatelessWidget {
                           child: Text(
                             mailData.from.split('@')[0],
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                        Text(formatTime(mailData.timestamp), style: TextStyle(color: grey, fontSize: 13)),
+                        Text(
+                          formatTime(mailData.timestamp),
+                          style: TextStyle(color: grey, fontSize: 13),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     GestureDetector(
                       onTap: () {
-                        context.read<MailBloc>().add(ToggleMailInfoEvent(mailData.id));
+                        context.read<MailBloc>().add(
+                          ToggleMailInfoEvent(mailData.id),
+                        );
                       },
                       child: Row(
                         children: [
-                          Text(isSent ? 'to ${mailData.to.split('@')[0]}' : 'to me', style: TextStyle(fontSize: 14, color: grey)),
+                          Text(
+                            isSent
+                                ? 'to ${mailData.to.split('@')[0]}'
+                                : 'to me',
+                            style: TextStyle(fontSize: 14, color: grey),
+                          ),
                           const SizedBox(width: 4),
                           AnimatedRotation(
                             turns: isExpanded ? 0.5 : 0,
                             duration: const Duration(milliseconds: 250),
-                            child: Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: grey),
+                            child: Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 20,
+                              color: grey,
+                            ),
                           ),
                         ],
                       ),
@@ -84,17 +103,27 @@ class MailDetailsHeader extends StatelessWidget {
               mailData.isDeleted(uid)
                   ? const SizedBox.shrink()
                   : IconButton(
-                      icon: Icon(mailData.isStarred(uid) ? Icons.star : Icons.star_border, size: 26),
-                      onPressed: () {
-                        context.read<MailBloc>().add(ToggleStarEvent(mailData.id, uid, !mailData.isStarred(uid)));
-                      },
+                    icon: Icon(
+                      mailData.isStarred(uid) ? Icons.star : Icons.star_border,
+                      size: 26,
                     ),
+                    onPressed: () {
+                      context.read<MailBloc>().add(
+                        ToggleStarEvent(
+                          mailData.id,
+                          uid,
+                          !mailData.isStarred(uid),
+                        ),
+                      );
+                    },
+                  ),
             ],
           ),
         ),
         AnimatedCrossFade(
           duration: const Duration(milliseconds: 300),
-          crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+          crossFadeState:
+              isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
           firstChild: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Container(
@@ -103,7 +132,10 @@ class MailDetailsHeader extends StatelessWidget {
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                color: systemTheme == Brightness.dark ? Colors.grey[900] : Colors.grey[100],
+                color:
+                    systemTheme == Brightness.dark
+                        ? Colors.grey[900]
+                        : Colors.grey[100],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,7 +144,13 @@ class MailDetailsHeader extends StatelessWidget {
                   const SizedBox(height: 6),
                   _infoRow("To", mailData.to),
                   const SizedBox(height: 6),
-                  _infoRow("Date", DateFormat('MMM d, y h:mm a').format(mailData.timestamp)),
+                  if (mailData.cc != null && mailData.cc!.isNotEmpty)
+                    _infoRow("CC", mailData.cc!),
+                  const SizedBox(height: 6),
+                  _infoRow(
+                    "Date",
+                    DateFormat('MMM d, y h:mm a').format(mailData.timestamp),
+                  ),
                 ],
               ),
             ),
@@ -126,7 +164,13 @@ class MailDetailsHeader extends StatelessWidget {
   Widget _infoRow(String title, String value) {
     return Row(
       children: [
-        SizedBox(width: 80, child: Text("$title:", style: const TextStyle(fontWeight: FontWeight.w600))),
+        SizedBox(
+          width: 80,
+          child: Text(
+            "$title:",
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
         Expanded(child: Text(value)),
       ],
     );

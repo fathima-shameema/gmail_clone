@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:gmail_clone/data/models/mail.dart';
 import 'package:gmail_clone/presentation/screens/home/compose_screen.dart';
 import 'package:gmail_clone/presentation/screens/home/home_screen.dart';
-import 'package:gmail_clone/presentation/screens/auth/signup_screen.dart';
 import 'package:gmail_clone/presentation/screens/home/mail_details_screen.dart';
 import 'package:gmail_clone/resources/themes/theme.dart';
 import 'package:gmail_clone/root_screen.dart';

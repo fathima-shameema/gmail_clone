@@ -1,6 +1,6 @@
 part of 'compose_bloc.dart';
 
-@immutable
+
 class ComposeState {
   final bool expandFrom;
   final bool expandTo;

@@ -7,13 +7,12 @@ class MailRepository {
   final _fire = FirebaseFirestore.instance;
   final usersColl = FirebaseFirestore.instance.collection('users');
 
-  // Helper: try find user uid by email in your users collection
   Future<String?> _uidForEmail(String email) async {
     try {
       final snap =
           await usersColl.where('email', isEqualTo: email).limit(1).get();
       if (snap.docs.isEmpty) return null;
-      return snap.docs.first.id; // assuming docId == uid
+      return snap.docs.first.id;
     } catch (e) {
       log('[repo] uid lookup error: $e');
       return null;
@@ -21,26 +20,22 @@ class MailRepository {
   }
 
   Future<void> sendMail(MailModel mail, String senderUid) async {
-    final receiverUid = await _uidForEmail(mail.to);
-
     final Map<String, dynamic> userStatus = {};
 
-    // Always add sender
     userStatus[senderUid] = {
       "starred": false,
       "important": false,
       "deleted": false,
     };
 
-    // If receiver UID exists (registered user)
-    if (receiverUid != null) {
-      userStatus[receiverUid] = {
+    final toReceiverUid = await _uidForEmail(mail.to);
+    if (toReceiverUid != null) {
+      userStatus[toReceiverUid] = {
         "starred": false,
         "important": false,
         "deleted": false,
       };
     } else {
-      // Receiver not registered — create a fallback entry
       userStatus[mail.to] = {
         "starred": false,
         "important": false,
@@ -48,6 +43,35 @@ class MailRepository {
       };
     }
 
+    if (mail.cc != null && mail.cc!.trim().isNotEmpty) {
+      // support single or multiple (comma-separated)
+      final ccList =
+          mail.cc!
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList();
+
+      for (final ccEmail in ccList) {
+        final ccUid = await _uidForEmail(ccEmail);
+
+        if (ccUid != null) {
+          userStatus[ccUid] = {
+            "starred": false,
+            "important": false,
+            "deleted": false,
+          };
+        } else {
+          userStatus[ccEmail] = {
+            "starred": false,
+            "important": false,
+            "deleted": false,
+          };
+        }
+      }
+    }
+
+    // finally write mail
     await _fire.collection("mails").doc(mail.id).set({
       ...mail.toMap(),
       "userStatus": userStatus,
@@ -58,12 +82,16 @@ class MailRepository {
   Stream<List<MailModel>> getInbox(String email, String uid) {
     return _fire
         .collection("mails")
-        .where("to", isEqualTo: email)
+        .where("userIds", arrayContainsAny: [uid, email])
         .snapshots()
         .map((snap) {
           return snap.docs
               .map((d) => MailModel.fromMap(d.data()))
-              .where((m) => !m.isDeleted(uid))
+              .where(
+                (m) =>
+                    !(m.userStatus[uid]?['deleted'] == true ||
+                        m.userStatus[email]?['deleted'] == true),
+              )
               .toList();
         });
   }
@@ -82,19 +110,20 @@ class MailRepository {
   }
 
   Stream<List<MailModel>> getAllInboxes(List<String> emails, String uid) {
-    if (emails.isEmpty) return Stream.value([]);
-    final limited = emails.length <= 10 ? emails : emails.take(10).toList();
-    return _fire
-        .collection("mails")
-        .where("to", whereIn: limited)
-        .snapshots()
-        .map((snap) {
-          return snap.docs
-              .map((d) => MailModel.fromMap(d.data()))
-              .where((m) => !m.isDeleted(uid))
-              .toList();
-        });
-  }
+  if (emails.isEmpty) return Stream.value([]);
+  final limited = emails.length <= 10 ? emails : emails.take(10).toList();
+  return _fire
+      .collection("mails")
+      .where("userIds", arrayContainsAny: limited)
+      .snapshots()
+      .map((snap) {
+        return snap.docs
+            .map((d) => MailModel.fromMap(d.data()))
+            .where((m) => !m.isDeletedFor(uid, /* choose a fallback email if available */ ''))
+            .toList();
+      });
+}
+
 
   Stream<List<MailModel>> getAllSent(List<String> emails, String uid) {
     if (emails.isEmpty) return Stream.value([]);

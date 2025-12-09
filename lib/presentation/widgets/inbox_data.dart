@@ -1,4 +1,3 @@
-// lib/presentation/widgets/inbox_data.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gmail_clone/bloc/mail_bloc/mail_bloc.dart';

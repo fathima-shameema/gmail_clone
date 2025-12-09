@@ -1,6 +1,5 @@
 part of 'compose_bloc.dart';
 
-@immutable
 abstract class ComposeEvent {}
 
 class ToggleExpandFromEvent extends ComposeEvent {}
