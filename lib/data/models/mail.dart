@@ -10,7 +10,6 @@ class MailModel {
   final String body;
   final DateTime timestamp;
   final Map<String, dynamic> userStatus;
-  // optional list of userIds who are part of mail (sender + receiver)
   final List<String> userIds;
 
   MailModel({
