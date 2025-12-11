@@ -14,17 +14,22 @@ void main() async {
   final mailRepo = MailRepository();
 
   runApp(
-    MultiBlocProvider(
+    MultiRepositoryProvider(
       providers: [
-        BlocProvider(
-          create:
-              (_) =>
-                  AuthBloc(AuthRepository(), LocalStorage())
-                    ..add(LoadSavedAccounts()),
-        ),
-        BlocProvider(create: (context) => MailBloc(mailRepo)),
+        RepositoryProvider<MailRepository>(create: (_) => MailRepository()),
       ],
-      child: const MyApp(),
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create:
+                (_) =>
+                    AuthBloc(AuthRepository(), LocalStorage())
+                      ..add(LoadSavedAccounts()),
+          ),
+          BlocProvider(create: (context) => MailBloc(mailRepo)),
+        ],
+        child: const MyApp(),
+      ),
     ),
   );
 }

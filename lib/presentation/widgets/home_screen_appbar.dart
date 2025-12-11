@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gmail_clone/bloc/auth_bloc/auth_bloc.dart';
+import 'package:gmail_clone/bloc/search_bloc/search_bloc.dart';
+import 'package:gmail_clone/presentation/screens/home/search_page.dart';
 
 class HomeScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
   const HomeScreenAppBar({
@@ -32,6 +34,21 @@ class HomeScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
           borderRadius: BorderRadius.circular(35),
         ),
         child: TextField(
+          onChanged: (v) {
+            context.read<SearchBloc>().add(SearchQueryChanged(v));
+          },
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (_) => BlocProvider.value(
+                      value: context.read<SearchBloc>(), // pass existing bloc
+                      child: const SearchPage(),
+                    ),
+              ),
+            );
+          },
           controller: _searchController,
           cursorColor: Colors.grey,
           decoration: InputDecoration(

@@ -25,6 +25,10 @@ class MailBloc extends Bloc<MailEvent, MailState> {
     on<LoadImportantEvent>(_onLoadImportant);
     on<EmptyBinEvent>(_onEmptyBin);
     on<AutoCleanBinEvent>(_onAutoCleanBin);
+    on<LoadPromotionsEvent>(_onLoadPromotions);
+    on<LoadSocialEvent>(_onLoadSocial);
+    on<LoadSpamEvent>(_onLoadSpam);
+    on<LoadPrimaryEvent>(_onLoadPrimary);
   }
 
   Future<void> _onSendMail(SendMailEvent event, Emitter<MailState> emit) async {
@@ -133,8 +137,11 @@ class MailBloc extends Bloc<MailEvent, MailState> {
 
     await emit.forEach<List<MailModel>>(
       repo.getImportant(e.uid),
-      onData: (list) => state.copyWith(important: list, importantLoading: false),
-      onError: (err, st) => state.copyWith(error: err.toString(),importantLoading: false),
+      onData:
+          (list) => state.copyWith(important: list, importantLoading: false),
+      onError:
+          (err, st) =>
+              state.copyWith(error: err.toString(), importantLoading: false),
     );
   }
 
@@ -160,4 +167,60 @@ class MailBloc extends Bloc<MailEvent, MailState> {
     }
     emit(state.copyWith(expandedMailInfoIds: current));
   }
+  Future<void> _onLoadPromotions(
+  LoadPromotionsEvent event,
+  Emitter<MailState> emit,
+) async {
+  emit(state.copyWith(inboxLoading: true));
+
+  await emit.forEach<List<MailModel>>(
+    repo.getPromotions(),
+    onData: (list) => state.copyWith(inbox: list, inboxLoading: false),
+    onError: (err, st) =>
+        state.copyWith(error: err.toString(), inboxLoading: false),
+  );
+}
+
+Future<void> _onLoadSocial(
+  LoadSocialEvent event,
+  Emitter<MailState> emit,
+) async {
+  emit(state.copyWith(inboxLoading: true));
+
+  await emit.forEach<List<MailModel>>(
+    repo.getSocial(),
+    onData: (list) => state.copyWith(inbox: list, inboxLoading: false),
+    onError: (err, st) =>
+        state.copyWith(error: err.toString(), inboxLoading: false),
+  );
+}
+
+Future<void> _onLoadSpam(
+  LoadSpamEvent event,
+  Emitter<MailState> emit,
+) async {
+  emit(state.copyWith(inboxLoading: true));
+
+  await emit.forEach<List<MailModel>>(
+    repo.getSpam(),
+    onData: (list) => state.copyWith(inbox: list, inboxLoading: false),
+    onError: (err, st) =>
+        state.copyWith(error: err.toString(), inboxLoading: false),
+  );
+}
+
+Future<void> _onLoadPrimary(
+  LoadPrimaryEvent event,
+  Emitter<MailState> emit,
+) async {
+  emit(state.copyWith(inboxLoading: true));
+
+  await emit.forEach<List<MailModel>>(
+    repo.getPrimary(),
+    onData: (list) => state.copyWith(inbox: list, inboxLoading: false),
+    onError: (err, st) =>
+        state.copyWith(error: err.toString(), inboxLoading: false),
+  );
+}
+
 }

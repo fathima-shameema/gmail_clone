@@ -79,20 +79,23 @@ class InboxList extends StatelessWidget {
                 allMails = allMailsMap.values.toList();
                 break;
               case DrawerFilterType.primary:
-                allMails =
-                    mailState.inbox.where((mail) {
-                      final isParticipant =
-                          mail.userIds.contains(userUid) ||
-                          mail.userIds.contains(userEmail);
-                      final notSender = mail.from != userEmail;
-                      final notDeleted = !mail.isDeletedFor(userUid, userEmail);
-                      return isParticipant && notSender && notDeleted;
-                    }).toList();
+                allMails = List.from(
+                  mailState.inbox.where((mail) {
+                    final isParticipant =
+                        mail.userIds.contains(userUid) ||
+                        mail.userIds.contains(userEmail);
+                    final notSender = mail.from != userEmail;
+                    final notDeleted = !mail.isDeletedFor(userUid, userEmail);
+                    return isParticipant && notSender && notDeleted;
+                  }),
+                );
                 break;
               case DrawerFilterType.promotions:
               case DrawerFilterType.social:
-                allMails = [];
+              case DrawerFilterType.spam:
+                allMails = List.from(mailState.inbox);
                 break;
+
               case DrawerFilterType.starred:
                 {
                   final map = <String, MailModel>{};
@@ -106,16 +109,14 @@ class InboxList extends StatelessWidget {
                 }
                 break;
               case DrawerFilterType.important:
-                allMails = mailState.important;
+                allMails = List.from(mailState.important);
                 break;
               case DrawerFilterType.sent:
-                allMails = mailState.sent;
+                allMails = List.from(mailState.sent);
                 break;
-              case DrawerFilterType.spam:
-                allMails = [];
-                break;
+
               case DrawerFilterType.bin:
-                allMails = mailState.bin;
+                allMails = List.from(mailState.bin);
                 isBin = true;
                 break;
             }

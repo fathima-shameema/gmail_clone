@@ -1,7 +1,7 @@
-// lib/data/repository/mail_repository.dart
 import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:gmail_clone/data/models/mail.dart';
+import 'package:gmail_clone/data/services/ai_classifier.dart';
 
 class MailRepository {
   final _fire = FirebaseFirestore.instance;
@@ -21,30 +21,45 @@ class MailRepository {
 
   Future<void> sendMail(MailModel mail, String senderUid) async {
     final Map<String, dynamic> userStatus = {};
+    final List<String> userIds = [];
 
+    // -------------------------
+    // ALWAYS add sender UID
+    // -------------------------
     userStatus[senderUid] = {
       "starred": false,
       "important": false,
       "deleted": false,
+      "isSender": true,
     };
+    userIds.add(senderUid); // <-- FIXED!
 
+    // -------------------------
+    // Receiver
+    // -------------------------
     final toReceiverUid = await _uidForEmail(mail.to);
+
     if (toReceiverUid != null) {
       userStatus[toReceiverUid] = {
         "starred": false,
         "important": false,
         "deleted": false,
       };
+      userIds.add(toReceiverUid);
     } else {
       userStatus[mail.to] = {
+        // store email-identifier
         "starred": false,
         "important": false,
         "deleted": false,
       };
+      userIds.add(mail.to); // <-- store email
     }
 
+    // -------------------------
+    // CC
+    // -------------------------
     if (mail.cc != null && mail.cc!.trim().isNotEmpty) {
-      // support single or multiple (comma-separated)
       final ccList =
           mail.cc!
               .split(',')
@@ -52,30 +67,34 @@ class MailRepository {
               .where((e) => e.isNotEmpty)
               .toList();
 
-      for (final ccEmail in ccList) {
-        final ccUid = await _uidForEmail(ccEmail);
-
+      for (final cc in ccList) {
+        final ccUid = await _uidForEmail(cc);
         if (ccUid != null) {
           userStatus[ccUid] = {
             "starred": false,
             "important": false,
             "deleted": false,
           };
+          userIds.add(ccUid);
         } else {
-          userStatus[ccEmail] = {
+          userStatus[cc] = {
             "starred": false,
             "important": false,
             "deleted": false,
           };
+          userIds.add(cc); // <-- string fallback
         }
       }
     }
 
-    // finally write mail
+    // -------------------------
+    // Save to Firestore
+    // -------------------------
     await _fire.collection("mails").doc(mail.id).set({
       ...mail.toMap(),
       "userStatus": userStatus,
-      "userIds": userStatus.keys.toList(),
+      "userIds": userIds,
+      "senderUid": senderUid,
     });
   }
 
@@ -90,7 +109,8 @@ class MailRepository {
               .where(
                 (m) =>
                     !(m.userStatus[uid]?['deleted'] == true ||
-                        m.userStatus[email]?['deleted'] == true),
+                        m.userStatus[email]?['deleted'] == true) &&
+                    m.from != email,
               )
               .toList();
         });
@@ -110,20 +130,25 @@ class MailRepository {
   }
 
   Stream<List<MailModel>> getAllInboxes(List<String> emails, String uid) {
-  if (emails.isEmpty) return Stream.value([]);
-  final limited = emails.length <= 10 ? emails : emails.take(10).toList();
-  return _fire
-      .collection("mails")
-      .where("userIds", arrayContainsAny: limited)
-      .snapshots()
-      .map((snap) {
-        return snap.docs
-            .map((d) => MailModel.fromMap(d.data()))
-            .where((m) => !m.isDeletedFor(uid, /* choose a fallback email if available */ ''))
-            .toList();
-      });
-}
-
+    if (emails.isEmpty) return Stream.value([]);
+    final limited = emails.length <= 10 ? emails : emails.take(10).toList();
+    return _fire
+        .collection("mails")
+        .where("userIds", arrayContainsAny: limited)
+        .snapshots()
+        .map((snap) {
+          return snap.docs
+              .map((d) => MailModel.fromMap(d.data()))
+              .where(
+                (m) =>
+                    !m.isDeletedFor(
+                      uid,
+                      /* choose a fallback email if available */ '',
+                    ),
+              )
+              .toList();
+        });
+  }
 
   Stream<List<MailModel>> getAllSent(List<String> emails, String uid) {
     if (emails.isEmpty) return Stream.value([]);
@@ -225,5 +250,105 @@ class MailRepository {
         }
       }
     }
+  }
+
+  Stream<List<MailModel>> getPromotions() {
+    return _fire
+        .collection("mails")
+        .where("category", isEqualTo: "promotion")
+        .snapshots()
+        .map((s) => s.docs.map((d) => MailModel.fromMap(d.data())).toList());
+  }
+
+  Stream<List<MailModel>> getSocial() {
+    return _fire
+        .collection("mails")
+        .where("category", isEqualTo: "social")
+        .snapshots()
+        .map((s) => s.docs.map((d) => MailModel.fromMap(d.data())).toList());
+  }
+
+  Stream<List<MailModel>> getSpam() {
+    return _fire
+        .collection("mails")
+        .where("category", isEqualTo: "spam")
+        .snapshots()
+        .map((s) => s.docs.map((d) => MailModel.fromMap(d.data())).toList());
+  }
+
+  Stream<List<MailModel>> getPrimary() {
+    return _fire
+        .collection("mails")
+        .where("category", isEqualTo: "none")
+        .snapshots()
+        .map((s) => s.docs.map((d) => MailModel.fromMap(d.data())).toList());
+  }
+
+  Future<List<MailModel>> searchMails(
+    String query, {
+    required String userId,
+    required String userEmail,
+    int limit = 50,
+  }) async {
+    if (query.trim().isEmpty) return [];
+    final normalized = query.toLowerCase();
+
+    // Fetch mails (no orderBy --> avoids required index)
+    final snapshot =
+        await _fire
+            .collection('mails')
+            .where('userIds', arrayContainsAny: [userId, userEmail])
+            .limit(200)
+            .get();
+
+    final mails =
+        snapshot.docs.map((d) => MailModel.fromMap(d.data())).toList();
+
+    final filtered =
+        mails.where((mail) {
+          final subject = mail.subject.toLowerCase();
+          final body = mail.body.toLowerCase();
+          final from = mail.from.toLowerCase();
+          final to = mail.to.toLowerCase();
+          final cc = (mail.cc ?? "").toLowerCase();
+          final category = mail.category.toLowerCase();
+
+          return subject.contains(normalized) ||
+              body.contains(normalized) ||
+              from.contains(normalized) ||
+              to.contains(normalized) ||
+              cc.contains(normalized) ||
+              category.contains(normalized);
+        }).toList();
+
+    filtered.sort((a, b) {
+      final aScore = _scoreForQuery(a, normalized);
+      final bScore = _scoreForQuery(b, normalized);
+      return bScore.compareTo(aScore);
+    });
+
+    return filtered.take(limit).toList();
+  }
+
+  int _scoreForQuery(MailModel m, String q) {
+    int score = 0;
+
+    final subject = m.subject.toLowerCase();
+    final body = m.body.toLowerCase();
+    final from = m.from.toLowerCase();
+    final to = m.to.toLowerCase();
+    final cc = (m.cc ?? "").toLowerCase();
+    final category = m.category.toLowerCase();
+
+    if (subject.contains(q)) score += 30;
+    if (subject.startsWith(q)) score += 15;
+
+    if (from.contains(q) || to.contains(q) || cc.contains(q)) score += 20;
+
+    if (body.contains(q)) score += 10;
+
+    if (category.contains(q)) score += 5;
+
+    return score;
   }
 }

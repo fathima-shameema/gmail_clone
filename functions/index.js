@@ -1,85 +1,50 @@
-// functions/index.js  (Firebase Functions v2 syntax)
-
 const { onCall } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
-const { OpenAIApi, Configuration } = require("openai");
+const OpenAI = require("openai");
 
 admin.initializeApp();
 
-// Load secret from Secret Manager
+// Define secret (it will read version 1 automatically)
 const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 
 exports.classifyEmail = onCall(
-  { secrets: [OPENAI_API_KEY] },
-  async (request) => {
-    const data = request.data;
-    
-    const subject = data.subject || "";
-    const body = data.body || "";
-    const from = data.from || "";
-    const to = data.to || "";
-    const messageId = data.messageId || "";
-
-    const text = `Subject: ${subject}\nFrom: ${from}\nTo: ${to}\n\n${body}`;
-
-    // Read secret value
-    const apiKey = OPENAI_API_KEY.value();
-    const openai = new OpenAIApi(new Configuration({ apiKey }));
-
-    // Moderation check
+  {
+    region: "us-central1",
+    secrets: [OPENAI_API_KEY],   // IMPORTANT
+    timeoutSeconds: 30,
+    memory: "512MB",
+  },
+  async (req) => {
     try {
-      const mod = await openai.createModeration({
-        model: "omni-moderation-latest",
-        input: text,
+      const apiKey = OPENAI_API_KEY.value();  // IMPORTANT FIX
+      const client = new OpenAI({ apiKey }); // IMPORTANT FIX
+
+      const { subject, body, from } = req.data;
+
+      const prompt = `
+Classify this email into one category: promotion, social, spam, or primary.
+Subject: ${subject}
+Body: ${body}
+From: ${from}
+      `;
+
+      const completion = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 10,
       });
 
-      if (mod?.data?.results?.[0]?.flagged) {
-        return {
-          label: "spam",
-          confidence: 0.99,
-          explanation: "Moderation flagged content",
-        };
-      }
-    } catch (err) {
-      console.log("Moderation error:", err);
-    }
+      const label = completion.choices[0].message.content
+        .trim()
+        .toLowerCase();
 
-    const systemPrompt = `You are an email classifier. Return ONLY JSON: {"label": "...", "confidence": 0.0}. 
-    Valid labels: "promotion", "social", "spam", "none".`;
-    
-    const userPrompt = `
-    Classify the following email ONLY as: promotion, social, spam.
-    If it does not fit these 3 categories, return {"label":"none","confidence":0.0}.
-    
-    Email:
-    ${text}
-    
-    Return ONLY JSON.
-    `.trim();
-    
-    const resp = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.0,
-      max_tokens: 200,
-    });
+      console.log("AI label:", label);
 
-    let output = resp.data.choices[0].message.content;
-
-    try {
-      return JSON.parse(output);
-    } catch (err) {
-      const match = output.match(/\{[\s\S]*\}/);
-      if (match) return JSON.parse(match[0]);
-      return {
-        label: "primary",
-        confidence: 0.5,
-        explanation: "Failed to parse output",
-      };
+      return { label };
+    } catch (error) {
+      console.error("🔥 classifyEmail error:", error);
+      throw new Error("classification_failed");
     }
   }
 );

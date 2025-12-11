@@ -1,4 +1,5 @@
-// lib/data/models/mail.dart
+
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MailModel {
@@ -11,7 +12,7 @@ class MailModel {
   final DateTime timestamp;
   final Map<String, dynamic> userStatus;
   final List<String> userIds;
-
+  final String category;
   MailModel({
     required this.id,
     required this.from,
@@ -22,6 +23,7 @@ class MailModel {
     required this.timestamp,
     required this.userStatus,
     required this.userIds,
+     this.category = 'none',
   });
 
   factory MailModel.fromMap(Map<String, dynamic> map) {
@@ -44,6 +46,7 @@ class MailModel {
               ?.map((e) => e.toString())
               .toList() ??
           [],
+      category: map['category'] ?? "none",
     );
   }
 
@@ -58,6 +61,7 @@ class MailModel {
       "timestamp": timestamp,
       "userStatus": userStatus,
       "userIds": userIds,
+      'category': category,
     };
   }
 

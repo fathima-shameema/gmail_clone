@@ -84,3 +84,12 @@ class ToggleMailInfoEvent extends MailEvent {
 }
 
 class ResetMailStateEvent extends MailEvent {}
+class LoadPromotionsEvent extends MailEvent {}
+class LoadSocialEvent extends MailEvent {}
+class LoadSpamEvent extends MailEvent {}
+class LoadPrimaryEvent extends MailEvent {
+  final String email;
+  final String uid;
+
+  LoadPrimaryEvent(this.email, this.uid);
+}

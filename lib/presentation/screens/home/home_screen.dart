@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gmail_clone/bloc/auth_bloc/auth_bloc.dart';
 import 'package:gmail_clone/bloc/mail_bloc/mail_bloc.dart';
+import 'package:gmail_clone/bloc/search_bloc/search_bloc.dart';
+import 'package:gmail_clone/data/repository/mail_repository.dart';
 import 'package:gmail_clone/presentation/widgets/account_switcher_sheet.dart';
 import 'package:gmail_clone/presentation/widgets/custom_loader.dart';
 import 'package:gmail_clone/presentation/widgets/gmail_drawer.dart';
@@ -68,8 +70,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // lib/presentation/screens/home/home_screen.dart
-  // ... (keep imports)
   void _handleDrawerSelection(DrawerFilterType filterType) {
     final mailBloc = context.read<MailBloc>();
     final authState = context.read<AuthBloc>().state;
@@ -83,14 +83,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
     switch (filterType) {
       case DrawerFilterType.primary:
-        mailBloc.add(LoadInboxEvent(email, uid));
+        mailBloc.add(LoadPrimaryEvent(email, uid));
         break;
+
+      case DrawerFilterType.promotions:
+        mailBloc.add(LoadPromotionsEvent());
+        break;
+
+      case DrawerFilterType.social:
+        mailBloc.add(LoadSocialEvent());
+        break;
+
+      case DrawerFilterType.spam:
+        mailBloc.add(LoadSpamEvent());
+        break;
+
       case DrawerFilterType.allInboxes:
         final emails = authState.accounts.map((e) => e.email).toList();
         mailBloc.add(LoadAllInboxesEvent(emails, uid));
         break;
       case DrawerFilterType.starred:
-        // load inbox + sent; InboxList will combine by checking isStarred(uid)
         mailBloc.add(LoadInboxEvent(email, uid));
         mailBloc.add(LoadSentEvent(email, uid));
         break;
@@ -100,15 +112,10 @@ class _HomeScreenState extends State<HomeScreen> {
       case DrawerFilterType.sent:
         mailBloc.add(LoadSentEvent(email, uid));
         break;
-      case DrawerFilterType.spam:
-        mailBloc.add(LoadInboxEvent(email, uid));
-        break;
+
       case DrawerFilterType.bin:
         mailBloc.add(AutoCleanBinEvent(uid));
         mailBloc.add(LoadBinEvent(uid));
-        break;
-      case DrawerFilterType.promotions:
-      case DrawerFilterType.social:
         break;
     }
   }
@@ -117,92 +124,111 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final systemTheme = MediaQuery.of(context).platformBrightness;
 
-    return Scaffold(
-      drawer: GmailDrawer(onFilterSelected: _handleDrawerSelection),
+    final activeUser = context.watch<AuthBloc>().state.activeUser;
 
-      endDrawer: const AccountSwitcherPanel(),
+    // If auth is not yet ready
+    if (activeUser == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
-      appBar: HomeScreenAppBar(
-        systemTheme: systemTheme,
-        searchController: _searchController,
-      ),
+    return BlocProvider(
+      create:
+          (_) => SearchBloc(
+            repo: context.read<MailRepository>(),
+            userId: activeUser.uid,
+            userEmail: activeUser.email
+          ),
+      child: Builder(
+        builder:
+            (context) => Scaffold(
+              drawer: GmailDrawer(onFilterSelected: _handleDrawerSelection),
 
-      body: BlocBuilder<MailBloc, MailState>(
-        builder: (context, mailState) {
-          final title = _getFilterTitle(mailState.filterType);
+              endDrawer: const AccountSwitcherPanel(),
 
-          bool isLoading = false;
-          switch (mailState.filterType) {
-            case DrawerFilterType.primary:
-              isLoading = mailState.inboxLoading;
-              break;
-            case DrawerFilterType.allInboxes:
-              isLoading = mailState.allInboxLoading;
-              break;
-            case DrawerFilterType.sent:
-              isLoading = mailState.sentLoading;
-              break;
-            case DrawerFilterType.starred:
-              isLoading = mailState.inboxLoading || mailState.sentLoading;
-              break;
-            case DrawerFilterType.important:
-              isLoading = mailState.importantLoading;
-              break;
-            case DrawerFilterType.bin:
-              isLoading = mailState.binLoading;
-              break;
-            default:
-              isLoading = false;
-          }
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 20.0),
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                    color:
-                        Theme.of(context).brightness == Brightness.dark
-                            ? AppColors.liightGrey
-                            : AppColors.darkgGey,
-                  ),
-                ),
+              appBar: HomeScreenAppBar(
+                systemTheme: systemTheme,
+                searchController: _searchController,
               ),
 
-              if (isLoading)
-                const Expanded(
-                  child: Center(child: CustomLoader()),
-                )
-              else
-                const InboxList(),
-            ],
-          );
-        },
-      ),
+              body: BlocBuilder<MailBloc, MailState>(
+                builder: (context, mailState) {
+                  final title = _getFilterTitle(mailState.filterType);
 
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color.fromARGB(255, 18, 33, 163),
-        elevation: 2,
-        label: const Row(
-          children: [
-            Icon(Icons.edit_outlined, size: 22, color: Colors.white),
-            SizedBox(width: 8),
-            Text("Compose", style: TextStyle(color: Colors.white)),
-          ],
-        ),
-        onPressed: () {
-          Navigator.of(context).pushNamed('/Compose mail');
-        },
-      ),
+                  bool isLoading = false;
+                  switch (mailState.filterType) {
+                    case DrawerFilterType.primary:
+                      isLoading = mailState.inboxLoading;
+                      break;
+                    case DrawerFilterType.allInboxes:
+                      isLoading = mailState.allInboxLoading;
+                      break;
+                    case DrawerFilterType.sent:
+                      isLoading = mailState.sentLoading;
+                      break;
+                    case DrawerFilterType.starred:
+                      isLoading =
+                          mailState.inboxLoading || mailState.sentLoading;
+                      break;
+                    case DrawerFilterType.important:
+                      isLoading = mailState.importantLoading;
+                      break;
+                    case DrawerFilterType.bin:
+                      isLoading = mailState.binLoading;
+                      break;
+                    default:
+                      isLoading = false;
+                  }
 
-      bottomNavigationBar: Container(
-        height: kBottomNavigationBarHeight,
-        color:
-            systemTheme == Brightness.dark
-                ? Colors.grey.shade900
-                : Colors.grey.shade100,
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 20.0),
+                        child: Text(
+                          title,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall!.copyWith(
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? AppColors.liightGrey
+                                    : AppColors.darkgGey,
+                          ),
+                        ),
+                      ),
+
+                      if (isLoading)
+                        const Expanded(child: Center(child: CustomLoader()))
+                      else
+                        const InboxList(),
+                    ],
+                  );
+                },
+              ),
+
+              floatingActionButton: FloatingActionButton.extended(
+                backgroundColor: const Color.fromARGB(255, 18, 33, 163),
+                elevation: 2,
+                label: const Row(
+                  children: [
+                    Icon(Icons.edit_outlined, size: 22, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text("Compose", style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+                onPressed: () {
+                  Navigator.of(context).pushNamed('/Compose mail');
+                },
+              ),
+
+              bottomNavigationBar: Container(
+                height: kBottomNavigationBarHeight,
+                color:
+                    systemTheme == Brightness.dark
+                        ? Colors.grey.shade900
+                        : Colors.grey.shade100,
+              ),
+            ),
       ),
     );
   }
