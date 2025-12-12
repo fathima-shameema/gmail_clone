@@ -20,82 +20,83 @@ class MailRepository {
   }
 
   Future<void> sendMail(MailModel mail, String senderUid) async {
-    final Map<String, dynamic> userStatus = {};
-    final List<String> userIds = [];
+    try {
+      final Map<String, dynamic> userStatus = {};
+      final List<String> userIds = [];
 
-    // -------------------------
-    // ALWAYS add sender UID
-    // -------------------------
-    userStatus[senderUid] = {
-      "starred": false,
-      "important": false,
-      "deleted": false,
-      "isSender": true,
-    };
-    userIds.add(senderUid); // <-- FIXED!
-
-    // -------------------------
-    // Receiver
-    // -------------------------
-    final toReceiverUid = await _uidForEmail(mail.to);
-
-    if (toReceiverUid != null) {
-      userStatus[toReceiverUid] = {
+      userStatus[senderUid] = {
         "starred": false,
         "important": false,
         "deleted": false,
+        "isSender": true,
       };
-      userIds.add(toReceiverUid);
-    } else {
-      userStatus[mail.to] = {
-        // store email-identifier
-        "starred": false,
-        "important": false,
-        "deleted": false,
-      };
-      userIds.add(mail.to); // <-- store email
-    }
+      userIds.add(senderUid);
 
-    // -------------------------
-    // CC
-    // -------------------------
-    if (mail.cc != null && mail.cc!.trim().isNotEmpty) {
-      final ccList =
-          mail.cc!
-              .split(',')
-              .map((e) => e.trim())
-              .where((e) => e.isNotEmpty)
-              .toList();
+      final toReceiverUid = await _uidForEmail(mail.to);
 
-      for (final cc in ccList) {
-        final ccUid = await _uidForEmail(cc);
-        if (ccUid != null) {
-          userStatus[ccUid] = {
-            "starred": false,
-            "important": false,
-            "deleted": false,
-          };
-          userIds.add(ccUid);
-        } else {
-          userStatus[cc] = {
-            "starred": false,
-            "important": false,
-            "deleted": false,
-          };
-          userIds.add(cc); // <-- string fallback
+      if (toReceiverUid != null) {
+        userStatus[toReceiverUid] = {
+          "starred": false,
+          "important": false,
+          "deleted": false,
+        };
+        userIds.add(toReceiverUid);
+      } else {
+        userStatus[mail.to] = {
+          "starred": false,
+          "important": false,
+          "deleted": false,
+        };
+        userIds.add(mail.to);
+      }
+
+      if (mail.cc != null && mail.cc!.trim().isNotEmpty) {
+        final ccList =
+            mail.cc!
+                .split(',')
+                .map((e) => e.trim())
+                .where((e) => e.isNotEmpty)
+                .toList();
+
+        for (final cc in ccList) {
+          final ccUid = await _uidForEmail(cc);
+
+          if (ccUid != null) {
+            userStatus[ccUid] = {
+              "starred": false,
+              "important": false,
+              "deleted": false,
+            };
+            userIds.add(ccUid);
+          } else {
+            userStatus[cc] = {
+              "starred": false,
+              "important": false,
+              "deleted": false,
+            };
+            userIds.add(cc);
+          }
         }
       }
-    }
 
-    // -------------------------
-    // Save to Firestore
-    // -------------------------
-    await _fire.collection("mails").doc(mail.id).set({
-      ...mail.toMap(),
-      "userStatus": userStatus,
-      "userIds": userIds,
-      "senderUid": senderUid,
-    });
+      // generate a category using the deployed Cloud Function
+      String category = ManualClassifier.classify(
+        subject: mail.subject,
+        body: mail.body,
+        from: mail.from,
+      );
+
+      await _fire.collection("mails").doc(mail.id).set({
+        ...mail.toMap(),
+        "category": category,
+        "userStatus": userStatus,
+        "userIds": userIds,
+        "senderUid": senderUid,
+      });
+    } catch (e, st) {
+      log("sendMail error: $e\n$st");
+      rethrow;
+    }
   }
 
   Stream<List<MailModel>> getInbox(String email, String uid) {

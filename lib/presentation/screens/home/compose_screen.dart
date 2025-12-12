@@ -141,19 +141,37 @@ class _ComposeScreenState extends State<ComposeScreen>
             if (compose.state.isSending &&
                 !mailState.loading &&
                 mailState.error == null) {
-              sendingSnack?.close();
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text("Sent")));
+              if (mounted) {
+                if (sendingSnack != null) {
+                  try {
+                    sendingSnack!.close();
+                  } catch (_) {}
+                }
+
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text("Sent")));
+              }
+
               compose.add(StopSendingEvent());
               Navigator.pop(context);
             }
 
             if (mailState.error != null) {
-              sendingSnack?.close();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Error: ${mailState.error}")),
-              );
+              if (mounted) {
+                if (sendingSnack != null) {
+                  try {
+                    sendingSnack!.close();
+                  } catch (_) {}
+                }
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Error: ${mailState.error}")),
+                );
+              }
+
+              compose.add(StopSendingEvent());
+
               compose.add(StopSendingEvent());
             }
           },

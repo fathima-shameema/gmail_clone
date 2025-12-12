@@ -1,50 +1,93 @@
-const { onCall } = require("firebase-functions/v2/https");
-const { defineSecret } = require("firebase-functions/params");
+const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-const OpenAI = require("openai");
+const axios = require("axios");
 
 admin.initializeApp();
 
-// Define secret (it will read version 1 automatically)
-const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
-
-exports.classifyEmail = onCall(
-  {
-    region: "us-central1",
-    secrets: [OPENAI_API_KEY],   // IMPORTANT
-    timeoutSeconds: 30,
-    memory: "512MB",
-  },
-  async (req) => {
-    try {
-      const apiKey = OPENAI_API_KEY.value();  // IMPORTANT FIX
-      const client = new OpenAI({ apiKey }); // IMPORTANT FIX
-
-      const { subject, body, from } = req.data;
-
-      const prompt = `
-Classify this email into one category: promotion, social, spam, or primary.
-Subject: ${subject}
-Body: ${body}
-From: ${from}
-      `;
-
-      const completion = await client.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 10,
-      });
-
-      const label = completion.choices[0].message.content
-        .trim()
-        .toLowerCase();
-
-      console.log("AI label:", label);
-
-      return { label };
-    } catch (error) {
-      console.error("🔥 classifyEmail error:", error);
-      throw new Error("classification_failed");
-    }
+exports.classifyEmail = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Auth required");
   }
-);
+
+  const { mailId, subject, body, from } = data;
+
+  if (!mailId) {
+    throw new functions.https.HttpsError("invalid-argument", "mailId missing");
+  }
+
+  const apiKey = functions.config().gemini.key;
+
+  const prompt = `
+RETURN ONLY VALID JSON. NO TEXT OUTSIDE JSON. NO EXPLANATION. NO MARKDOWN.
+
+You are an email classification engine for a Gmail-like app.
+Classify the email into EXACTLY ONE category:
+
+1. "promotion"
+   - marketing, ads, sales, discounts, offers
+   - newsletters, campaigns, product launches
+   - messages urging purchase or subscription
+
+2. "social"
+   - personal communication
+   - social media notifications (Instagram, Facebook, Twitter, LinkedIn)
+   - friend requests, community updates, invitations
+
+3. "spam"
+   - scams, phishing, threats, malware
+   - unknown senders with unsolicited ads
+   - fake rewards, money requests, unsafe links
+
+4. "primary"
+   - normal personal/work mail
+   - human-to-human communication
+   - receipts, invoices, confirmations
+   - anything NOT promotion/social/spam
+
+Rules:
+- ALWAYS return ONLY JSON.
+- No markdown, no commentary.
+- JSON format:
+
+{
+  "label": "promotion" | "social" | "spam" | "primary",
+  "confidence": 0.0
+}
+
+Email:
+From: ${from}
+Subject: ${subject}
+Body: """${body}"""
+
+Return ONLY the JSON above.
+`;
+
+  try {
+    const response = await axios.post(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey,
+      { contents: [{ parts: [{ text: prompt }] }] },
+      { headers: { "Content-Type": "application/json" } }
+    );
+
+    const output = response.data.candidates[0].content.parts[0].text.trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(output);
+    } catch (err) {
+      console.error("JSON parse failed — output was:", output);
+      return { label: "primary", confidence: 0.2 };
+    }
+
+    await admin.firestore().collection("mails").doc(mailId).set({
+      category: parsed.label,
+      confidence: parsed.confidence,
+    }, { merge: true });
+
+    return parsed;
+
+  } catch (err) {
+    console.error(err);
+    throw new functions.https.HttpsError("unknown", err.message);
+  }
+});

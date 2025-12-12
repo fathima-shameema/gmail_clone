@@ -43,7 +43,7 @@ class HomeScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
               MaterialPageRoute(
                 builder:
                     (_) => BlocProvider.value(
-                      value: context.read<SearchBloc>(), // pass existing bloc
+                      value: context.read<SearchBloc>(), 
                       child: const SearchPage(),
                     ),
               ),

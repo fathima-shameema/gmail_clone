@@ -17,12 +17,7 @@ class SignupScreen extends StatelessWidget {
             children: [
               const SizedBox(height: 40),
 
-              Center(
-                child: Image.asset(
-                  "assets/icons/gmail_5968534.png",
-                  height: 80,
-                ),
-              ),
+              Image.asset("assets/icons/gmail_5968534.png", height: 80),
 
               const SizedBox(height: 40),
 
@@ -53,21 +48,6 @@ class SignupScreen extends StatelessWidget {
                       },
                     );
                   },
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              Center(
-                child: TextButton(
-                  onPressed: () {},
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12.0),
-                    child: Text(
-                      "Use another account",
-                      style: TextStyle(fontSize: 15, color: Colors.blue),
-                    ),
-                  ),
                 ),
               ),
 
